@@ -26,6 +26,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 
     p_bootstrap = sub.add_parser("bootstrap", parents=[common], help="Create config and sync managed scaffolding")
     p_bootstrap.add_argument("--locale", default=None, help="Template locale (en/ru). Overrides config for this run.")
+    p_bootstrap.add_argument("--profile", default="auto", choices=["auto", "generic", "airis"], help="Config preset (auto/generic/airis). Used only when creating a new config.")
 
     p_sync = sub.add_parser("sync", parents=[common], help="Sync managed files (safe, idempotent)")
     p_sync.add_argument("--locale", default=None, help="Template locale (en/ru). Overrides config for this run.")
@@ -71,7 +72,7 @@ def main(argv: list[str] | None = None) -> int:
     if ns.cmd == "bootstrap":
         if not config_path.exists():
             detection = detect_project(project_root)
-            write_default_config(config_path, project_root=project_root, detection=detection)
+            write_default_config(config_path, project_root=project_root, detection=detection, profile_override=ns.profile)
             print(f"Wrote {config_path}")
         cfg = load_config(config_path)
         locale = ns.locale or cfg.locale

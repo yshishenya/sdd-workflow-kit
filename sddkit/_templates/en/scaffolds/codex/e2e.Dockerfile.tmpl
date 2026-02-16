@@ -1,0 +1,19 @@
+# managed-by: sdd-workflow-kit (kit-version: {{kit_version}})
+FROM mcr.microsoft.com/playwright:v1.57.0-jammy
+
+# Repo uses `.npmrc` with `engine-strict=true` and requires Node <= 22.
+# The upstream Playwright image currently ships with Node 24, so we
+# downgrade Node inside the container to keep `npm ci` working.
+#
+# Note: We keep the Playwright-provided browsers + system deps from base.
+RUN set -eux; \
+  rm -f /etc/apt/sources.list.d/nodesource.list; \
+  apt-get update; \
+  apt-get purge -y nodejs; \
+  apt-get autoremove -y; \
+  apt-get install -y --no-install-recommends ca-certificates curl gnupg; \
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -; \
+  apt-get install -y --no-install-recommends nodejs; \
+  node -v; \
+  npm -v; \
+  rm -rf /var/lib/apt/lists/*

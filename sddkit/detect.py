@@ -55,8 +55,8 @@ def detect_project(project_root: Path) -> dict[str, str]:
     recommended_profile = "generic"
     if has_meta_memory_bank or has_meta_sdd or has_meta_tools:
         recommended_profile = "airis"
-    elif has_docker_compose and has_backend_dir and has_src_dir and ("python" in langs) and ("node" in langs):
-        recommended_profile = "airis"
+    # Only auto-select "airis" when the repo already contains Airis/MemoryBank markers.
+    # Avoid surprising scaffolding in arbitrary full-stack repos.
 
     return {
         "languages": ",".join(langs),

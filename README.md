@@ -4,6 +4,8 @@ Universal repo you can pull into any project to bootstrap and keep in sync:
 
 - `AGENTS.md` (agent instructions + skill registry)
 - SDD scaffolding (`docs/templates/*`, `docs/Architecture/*`, `docs/ADR/*`, `docs/Features/*`, `specs/*`)
+- Memory Bank scaffolding (optional, Airis-style: `meta/memory_bank/*`)
+- Meta SDD scaffolding (optional: `meta/sdd/*` + wrapper `meta/tools/sdd`)
 - GitHub Actions check workflow (non-invasive, adds new workflow only)
 - Optional Codex skills packaging (imports from `~/.codex/skills` into this repo, then can install elsewhere)
 
@@ -20,6 +22,7 @@ Universal repo you can pull into any project to bootstrap and keep in sync:
 
 2. Bootstrap the project (safe defaults: never overwrite unmanaged files):
    - `python3 .tooling/sdd-workflow-kit/bin/sdd-kit bootstrap --project .`
+   - If you want Memory Bank + `meta/*` scaffolds in a new repo: `python3 .tooling/sdd-workflow-kit/bin/sdd-kit bootstrap --project . --profile airis`
 
 3. Keep files up to date:
    - `python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .`

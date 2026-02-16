@@ -172,7 +172,7 @@ def _template_kind_for_path(path: Path) -> str:
     if ext in {".yml", ".yaml"}:
         return "yaml"
     # For file types where a header could break parsing or executability, keep templates "raw".
-    if ext in {".sh", ".py", ".toml", ".json"}:
+    if ext in {".sh", ".py", ".toml", ".json", ".dockerfile"}:
         return "raw"
     return "text"
 
@@ -356,6 +356,18 @@ def _plan_writes(project_root: Path, kit_root: Path, cfg: SddKitConfig, detectio
             locale=locale,
             template_root="scaffolds/meta_sdd",
             dest_root=cfg.meta_sdd_root,
+            extra_data={},
+        )
+
+    if cfg.manage_codex_scaffold:
+        plan += _plan_from_template_tree(
+            project_root=project_root,
+            kit_root=kit_root,
+            cfg=cfg,
+            detection=detection,
+            locale=locale,
+            template_root="scaffolds/codex",
+            dest_root=cfg.codex_root,
             extra_data={},
         )
 

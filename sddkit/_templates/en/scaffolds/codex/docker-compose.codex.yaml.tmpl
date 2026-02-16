@@ -1,0 +1,56 @@
+services:
+  # Helper containers for Codex Actions when you are Docker-first.
+  # These avoid requiring a local Python venv / npm install in the worktree.
+
+  pytools:
+    image: python:3.11-slim
+    working_dir: /work
+    volumes:
+      - ./:/work
+      - codex-pytools-pip-cache:/root/.cache/pip
+    entrypoint: ["bash", "-lc"]
+
+  airis-e2e:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app/backend
+    environment:
+      # Ensure deterministic auth flow for Playwright global-setup (variant A: signup).
+      - WEBUI_SECRET_KEY=e2e-secret-key
+      - WEBUI_AUTH=true
+      - ENABLE_SIGNUP=true
+      - ENABLE_LOGIN_FORM=true
+      - ENABLE_INITIAL_ADMIN_SIGNUP=true
+      # Avoid long startup work during e2e (plugin dependency installs, etc).
+      - OFFLINE_MODE=true
+      - ENABLE_BASE_MODELS_CACHE=false
+      # Use isolated sqlite DB so config/users do not leak across runs.
+      - DATABASE_URL=sqlite:////app/backend/data/e2e.sqlite3
+      # Keep billing surface enabled (UI uses these routes; API is mocked in Playwright).
+      - ENABLE_BILLING_WALLET=true
+      - ENABLE_BILLING_SUBSCRIPTIONS=false
+      - LEAD_MAGNET_ENABLED=true
+    volumes:
+      - codex-airis-e2e-data:/app/backend/data
+
+  e2e:
+    depends_on:
+      - airis-e2e
+    build:
+      context: .
+      dockerfile: .codex/e2e.Dockerfile
+    image: airis-e2e:playwright-1.57-node22
+    working_dir: /work
+    environment:
+      # In this compose project network, "airis-e2e" resolves to the backend container.
+      - PLAYWRIGHT_BASE_URL=http://airis-e2e:8080
+    volumes:
+      - ./:/work
+      - codex-e2e-node-modules:/work/node_modules
+    entrypoint: ["bash", "-lc"]
+
+volumes:
+  codex-pytools-pip-cache: {}
+  codex-e2e-node-modules: {}
+  codex-airis-e2e-data: {}

@@ -94,16 +94,24 @@ def load_config(config_path: Path | None) -> SddKitConfig:
     return cfg
 
 
-def write_default_config(config_path: Path, *, project_root: Path, detection: dict[str, Any]) -> None:
+def write_default_config(
+    config_path: Path,
+    *,
+    project_root: Path,
+    detection: dict[str, Any],
+    profile_override: str | None = None,
+) -> None:
     config_path.parent.mkdir(parents=True, exist_ok=True)
     # Keep config minimal and stable; detection is informational.
     locale = os.environ.get("SDDKIT_LOCALE", "en")
     project_name = project_root.name
-    profile = str(detection.get("recommended_profile") or "generic")
+    detected_profile = str(detection.get("recommended_profile") or "generic")
+    profile = profile_override if profile_override and profile_override != "auto" else detected_profile
     integration_branch = "airis_b2c" if profile == "airis" else "main"
     manage_memory_bank = "true" if profile == "airis" else "false"
     manage_meta_tools = "true" if profile == "airis" else "false"
     manage_meta_sdd = "true" if profile == "airis" else "false"
+    manage_codex_scaffold = "true" if profile == "airis" else "false"
     manage_docs_scaffold = "false" if profile == "airis" else "true"
     manage_specs_scaffold = "false" if profile == "airis" else "true"
     content = f"""[sddkit]
@@ -133,7 +141,7 @@ specs_scaffold = {manage_specs_scaffold}
 memory_bank = {manage_memory_bank}
 meta_tools = {manage_meta_tools}
 meta_sdd = {manage_meta_sdd}
-codex_scaffold = false
+codex_scaffold = {manage_codex_scaffold}
 
 [skills]
 default_pack = "codex"
