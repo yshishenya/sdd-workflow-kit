@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# managed-by: sdd-workflow-kit (kit-version: {{kit_version}})
+set -euo pipefail
+
+META_ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+UPDATES_DIR="$META_ROOT_DIR/memory_bank/branch_updates"
+CURRENT_TASKS="$META_ROOT_DIR/memory_bank/current_tasks.md"
+
+if [[ ! -f "$CURRENT_TASKS" ]]; then
+  echo "Missing: $CURRENT_TASKS"
+  exit 1
+fi
+
+if [[ ! -d "$UPDATES_DIR" ]]; then
+  echo "Missing: $UPDATES_DIR"
+  exit 1
+fi
+
+shopt -s nullglob
+updates=("$UPDATES_DIR"/*.md)
+shopt -u nullglob
+
+if [[ ${#updates[@]} -eq 0 ]]; then
+  echo "No branch updates found."
+  exit 0
+fi
+
+echo "Branch updates found:"
+for file in "${updates[@]}"; do
+  echo " - ${file##*/}"
+done
+
+echo
+echo "Manual step required:"
+echo "1) Open each file and copy entries into $CURRENT_TASKS"
+echo "2) Delete the processed update files"
+echo
+
+read -r -p "Open updates folder now? [y/N]: " answer
+if [[ "${answer,,}" == "y" || "${answer,,}" == "yes" ]]; then
+  if command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$UPDATES_DIR"
+  elif command -v open >/dev/null 2>&1; then
+    open "$UPDATES_DIR"
+  else
+    echo "No opener found; open manually: $UPDATES_DIR"
+  fi
+fi

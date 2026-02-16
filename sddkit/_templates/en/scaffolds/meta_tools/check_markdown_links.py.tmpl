@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+# managed-by: sdd-workflow-kit (kit-version: {{kit_version}})
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+from pathlib import Path
+
+
+_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+_URL_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*://")
+
+
+@dataclass(frozen=True)
+class BrokenLink:
+    source_file: str
+    target: str
+
+
+def _iter_markdown_files(repo_root: Path, meta_root: Path) -> list[Path]:
+    candidates: list[Path] = []
+
+    if (meta_root / "memory_bank").exists():
+        candidates.extend((meta_root / "memory_bank").rglob("*.md"))
+    if (meta_root / "docs").exists():
+        candidates.extend((meta_root / "docs").rglob("*.md"))
+    if (meta_root / "sdd").exists():
+        candidates.extend((meta_root / "sdd").rglob("*.md"))
+
+    # Keep scanning upstream docs too (read-only, but links should still work).
+    candidates.extend((repo_root / "docs").rglob("*.md"))
+
+    for root_md in (
+        repo_root / "AGENTS.md",
+        repo_root / "TROUBLESHOOTING.md",
+        repo_root / "README.md",
+    ):
+        if root_md.exists():
+            candidates.append(root_md)
+
+    meta_readme = meta_root / "README.md"
+    if meta_readme.exists():
+        candidates.append(meta_readme)
+
+    return sorted({p for p in candidates if p.is_file()})
+
+
+def _normalize_target(raw_target: str) -> str:
+    target = raw_target.strip()
+    if not target:
+        return ""
+    if target.startswith("#"):
+        return ""
+    if _URL_RE.match(target):
+        return ""
+    if target.startswith("mailto:"):
+        return ""
+
+    # Strip title part: (path "title")
+    if " " in target and not target.startswith("<"):
+        target = target.split(" ", 1)[0]
+
+    # Allow <path with spaces>
+    target = target.strip()
+    if target.startswith("<") and target.endswith(">"):
+        target = target[1:-1]
+
+    return target
+
+
+def _resolve_path(source_file: Path, target: str) -> Path | None:
+    path_part = target.split("#", 1)[0].strip()
+    if not path_part:
+        return None
+    if path_part.startswith("/"):
+        return Path(path_part)
+    return (source_file.parent / path_part).resolve()
+
+
+def _find_broken_links(repo_root: Path, files: list[Path]) -> list[BrokenLink]:
+    broken: list[BrokenLink] = []
+
+    for md_file in files:
+        try:
+            text = md_file.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+
+        for match in _LINK_RE.finditer(text):
+            raw_target = match.group(1)
+            target = _normalize_target(raw_target)
+            if not target:
+                continue
+
+            resolved = _resolve_path(md_file, target)
+            if resolved is None:
+                continue
+
+            if not resolved.exists():
+                broken.append(
+                    BrokenLink(
+                        source_file=md_file.relative_to(repo_root).as_posix(),
+                        target=raw_target,
+                    )
+                )
+
+    # De-dup while keeping stable order
+    seen: set[BrokenLink] = set()
+    uniq: list[BrokenLink] = []
+    for item in broken:
+        if item in seen:
+            continue
+        seen.add(item)
+        uniq.append(item)
+    return uniq
+
+
+def main() -> int:
+    # meta/tools/check_markdown_links.py -> repo root is 2 levels up.
+    repo_root = Path(__file__).resolve().parents[2]
+    meta_root = Path(__file__).resolve().parents[1]
+    files = _iter_markdown_files(repo_root, meta_root)
+    broken = _find_broken_links(repo_root, files)
+
+    if broken:
+        for item in broken:
+            print(f"BROKEN: {item.source_file} -> {item.target}")
+        print(f"\nChecked {len(files)} files, broken links: {len(broken)}")
+        return 1
+
+    print(f"Checked {len(files)} files, broken links: 0")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

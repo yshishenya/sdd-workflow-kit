@@ -1,0 +1,115 @@
+# Testing Strategy
+
+This repository is an Airis fork of Open WebUI.
+
+## Test Layers
+
+- Unit tests: business logic, helpers, small services.
+- Integration tests: routers + DB + billing flows.
+- E2E tests: critical user scenarios with Playwright.
+
+## Commands
+
+This project is **Docker Compose-first** (especially for Codex Actions). Prefer running commands inside containers.
+
+### Backend (Python)
+
+- Run tests:
+  - `docker compose -f docker-compose.yaml -f docker-compose.dev.yaml run --rm airis bash -lc "pytest"`
+
+### Frontend (SvelteKit)
+
+- Unit tests (Vitest):
+  - `docker compose -f docker-compose.yaml -f docker-compose.dev.yaml run --rm --no-deps airis-frontend sh -lc "if [ ! -e node_modules/.bin/vitest ]; then npm ci --legacy-peer-deps; fi; npm run test:frontend"`
+- Typecheck (svelte-check):
+  - `docker compose -f docker-compose.yaml -f docker-compose.dev.yaml run --rm --no-deps airis-frontend sh -lc "if [ ! -e node_modules/.bin/svelte-check ]; then npm ci --legacy-peer-deps; fi; npm run check"`
+- Lint (ESLint):
+  - `docker compose -f docker-compose.yaml -f docker-compose.dev.yaml run --rm --no-deps airis-frontend sh -lc "if [ ! -e node_modules/.bin/eslint ]; then npm ci --legacy-peer-deps; fi; npm run lint:frontend"`
+
+### E2E
+
+- Run E2E tests:
+  - `docker compose -f docker-compose.yaml -f docker-compose.dev.yaml -f .codex/docker-compose.codex.yaml run --rm --no-deps e2e "npm ci && npm run test:e2e"`
+
+## Coverage
+
+- Target: 80%+ on critical paths.
+- Prefer meaningful assertions over chasing a number.
+
+## Billing Confidence Pipeline
+
+- CI workflow: `.github/workflows/billing-confidence.yml`
+- Runner: `scripts/ci/run_billing_confidence.sh`
+- Coverage gate checker: `scripts/ci/check_billing_module_coverage.py`
+- Local entrypoints:
+  - `npm run billing:confidence:pr-fast`
+  - `npm run billing:confidence:merge-medium`
+  - `npm run billing:confidence:release-heavy`
+  - `npm run billing:confidence:smoke` (fast local guard: validates that pass suites create junit artifacts and fail cases are detected)
+  - CI smoke artifacts: `artifacts/billing-confidence/<run-id>/smoke/` (persisted in workflow artifacts for post-failure triage)
+  - Manual debug: `workflow_dispatch` supports `smoke_only=true` to run only the smoke guard without running full suites.
+
+### Tier Model
+
+- `pr-fast` (PR to `{{integration_branch}}`): backend billing critical pack + billing balance frontend spec + billing wallet E2E pack.
+- `merge-medium` (push to `{{integration_branch}}`): `pr-fast` + backend billing coverage pack with module-scoped line+branch gate.
+- `release-heavy` (manual `workflow_dispatch`): `merge-medium` + extended backend billing pack.
+
+### Module Coverage Gate (merge-medium/release-heavy)
+
+- Coverage source: `pytest --cov-branch --cov-report=json`.
+- Gate is module-scoped and non-vanity:
+  - `open_webui/routers/billing.py`: line `>=85`, branch `>=65`.
+  - `open_webui/utils/billing.py`: line `>=85`, branch `>=70`.
+- Override knobs (CI env):
+  - `BILLING_COVERAGE_MIN_ROUTERS_LINE`
+  - `BILLING_COVERAGE_MIN_ROUTERS_BRANCH`
+  - `BILLING_COVERAGE_MIN_UTILS_LINE`
+  - `BILLING_COVERAGE_MIN_UTILS_BRANCH`
+- Rationale: enforce release-level confidence on payment-critical modules while keeping branch gates strong enough to prevent shallow line-only gaming.
+
+### Ownership Model
+
+- Feature owner:
+  - Fixes failing billing-confidence checks on their branch/PR.
+- Integration owner (`{{integration_branch}}`):
+  - Monitors merge-medium failures and blocks unstable merges.
+- Release owner:
+  - Runs release-heavy and requires green status before production rollout.
+- QA/triage owner:
+  - Uses uploaded artifacts to classify failures (test bug, infra flake, product regression) and routes follow-up tasks.
+
+## Timeout and Artifact Triage
+
+- Timeout control:
+  - Global per-suite timeout is controlled by `BILLING_CONFIDENCE_TIMEOUT_SECONDS` (default `1800`).
+  - Timeouts are treated as hard failures and produce non-zero exit status.
+- Artifact root:
+  - `BILLING_CONFIDENCE_ARTIFACT_DIR` (default `artifacts/billing-confidence`).
+  - Each run writes to `artifacts/billing-confidence/<run-id>/`.
+- Canonical outputs:
+  - `results.tsv`: suite-level status/exit code/duration table.
+  - `summary.json`: machine-readable run report with `artifact_index`.
+  - `summary.md`: human-readable run summary.
+  - `logs/*`: per-suite command logs.
+  - `junit/*`: suite JUnit outputs when produced.
+  - `coverage/*.json`: coverage reports for gated suites.
+  - `traces/*`: E2E traces/output directories when produced.
+  - `latest/*`: pointers to the newest run summary and results.
+- Triage flow:
+  - Open `summary.json` first and identify the first failed/timeout suite.
+  - Inspect corresponding `logs/<suite>.log`.
+  - If available, open `junit/<suite>.xml` for failing test cases.
+  - For E2E failures, inspect `traces/<suite>/` outputs.
+  - Re-run only failed suite locally with the same tier command before patching.
+  - If failure is flaky/infrastructure-related, document in branch update and create a follow-up stabilization task.
+
+## Best Practices
+
+- Test behavior, not implementation.
+- Keep tests deterministic: avoid real network calls and time-dependent logic.
+- For billing, always cover:
+  - happy path
+  - insufficient funds / quota exceeded
+  - disabled feature flags (wallet/subscriptions/lead magnet)
+  - malformed requests

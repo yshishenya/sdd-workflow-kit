@@ -1,0 +1,19 @@
+name: sdd-kit
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: sdd-kit check
+        uses: ./{{kit_path}}
+        with:
+          project_root: .
+          config: {{config_path}}
+          fail_on_missing_config: "{{fail_on_missing_config}}"

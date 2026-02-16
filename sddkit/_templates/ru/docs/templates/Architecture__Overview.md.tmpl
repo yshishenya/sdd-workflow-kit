@@ -1,0 +1,25 @@
+# Architecture Overview
+
+Этот файл служит верхнеуровневой картой границ и правил зависимостей.
+
+Если у вас уже есть архитектурный документ, оставьте свой и отключите генерацию в `.sddkit/config.toml`.
+
+## Scoping (read first)
+
+- Начинай с этого документа перед чтением кода.
+- Навигация по ссылкам (без репо-сканирования).
+
+## System Map
+
+```mermaid
+flowchart LR
+  Entry["Entry Points"] -->|"calls"| Modules["Modules"]
+  Modules -->|"reads/writes"| Data["Data/State"]
+```
+
+## Module Index
+
+## Dependency Rules
+
+## Key Decisions (ADRs)
+

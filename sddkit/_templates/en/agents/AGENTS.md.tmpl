@@ -1,0 +1,40 @@
+# Agent Instructions (managed)
+
+This repository uses **Spec-Driven Development (SDD)** and a shared toolchain.
+
+## Project Summary
+
+- Detected languages: `{{languages}}`
+- Package managers: `{{package_managers}}`
+- sdd-workflow-kit version: `{{kit_version}}`
+
+## Workflow (SDD)
+
+- Write or update specs first (no coding before intent is captured).
+- Keep architecture and feature docs executable (verification steps must be real commands).
+- Prefer small, atomic tasks that touch one file at a time.
+
+## Common Commands (best-effort)
+
+- Install: `{{install_cmd}}`
+- Test: `{{test_cmd}}`
+- Lint: `{{lint_cmd}}`
+- Format: `{{format_cmd}}`
+
+## Skills
+
+Skills live under `{{codex_home}}/skills` (global) or `.codex/skills` (project-local).
+
+Install skills from this kit:
+
+- Global: `python3 {{kit_path}}/bin/sdd-kit install-skills --project . --to global`
+- Project: `python3 {{kit_path}}/bin/sdd-kit install-skills --project . --to project`
+
+### Available skills
+{{skills_block}}
+
+## Local overrides (safe)
+
+Do not edit managed files directly. Put repo-specific notes into:
+
+- `.sddkit/fragments/AGENTS.append.md`

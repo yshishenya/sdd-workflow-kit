@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+
+def _bootstrap_sys_path() -> None:
+    # Allow running from a git submodule checkout without installing the package.
+    repo_root = Path(__file__).resolve().parents[1]
+    sys.path.insert(0, str(repo_root))
+
+
+def main() -> int:
+    _bootstrap_sys_path()
+    from sddkit.cli import main as _main
+
+    return _main()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+

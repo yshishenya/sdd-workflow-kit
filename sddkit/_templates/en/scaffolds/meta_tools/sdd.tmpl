@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# managed-by: sdd-workflow-kit (kit-version: {{kit_version}})
+set -euo pipefail
+
+meta_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+repo_root="$(cd "$meta_root/.." && pwd)"
+specs_dir="$meta_root/sdd/specs"
+schema_cache="$meta_root/sdd/schema"
+
+if ! command -v sdd >/dev/null 2>&1; then
+  echo "Missing required tool: sdd" >&2
+  exit 127
+fi
+
+if [[ ! -d "$specs_dir" ]]; then
+  echo "Missing specs dir: $specs_dir" >&2
+  exit 1
+fi
+
+export CLAUDE_SDD_SCHEMA_CACHE="$schema_cache"
+
+exec sdd --path "$repo_root" --specs-dir "$specs_dir" "$@"

@@ -1,0 +1,60 @@
+# New Feature Development Process
+
+## 1. Preparation
+
+### 1.1 Branch Setup
+
+- [ ] Create a branch from the integration branch `{{integration_branch}}` (do not branch from `main`) following one of:
+  - `feature/short-description`
+  - `codex/feature/short-description`
+  - Example: `feature/add-public-pricing-config`
+
+### 1.2 Task Tracking
+
+- [ ] Log the task update per **[../guides/task_updates.md](../guides/task_updates.md)**
+- [ ] Set status to "In Progress"
+
+### 1.3 Requirements
+
+- [ ] Clarify goal, scope, and acceptance criteria
+- [ ] For non-trivial work:
+  - Create a **work item spec** in `../specs/work_items/` (see `../specs/README.md`) and reference it from your branch update entry
+  - Create an SDD spec (JSON) under `{{meta_sdd_root}}/specs/{pending,active,completed}/` and cross-link it from the work item spec
+    (and set `metadata.work_item_spec` in the SDD spec to point back)
+
+## 2. Design
+
+- [ ] Identify existing components to reuse (avoid re-inventing)
+- [ ] Map required API changes + UI changes
+- [ ] Confirm environment variables and configuration impacts
+
+## 3. Implementation
+
+- [ ] Implement incrementally (small reviewable steps)
+- [ ] Follow **[../guides/coding_standards.md](../guides/coding_standards.md)**
+- [ ] Follow **[../patterns/api_standards.md](../patterns/api_standards.md)** for new endpoints
+- [ ] Follow **[../patterns/error_handling.md](../patterns/error_handling.md)** for external calls and failure modes
+
+## 4. Testing
+
+- [ ] Run tests via Docker Compose (see **[testing strategy](../guides/testing_strategy.md)**)
+- [ ] Keep coverage in mind; focus on critical paths and error cases
+
+## 5. Code Quality
+
+- [ ] Backend formatting: `docker compose -f docker-compose.yaml -f docker-compose.dev.yaml run --rm airis bash -lc "black ."`
+- [ ] Backend linting (ruff): use Codex Action `ruff (docker)` or run `docker compose -f docker-compose.yaml -f docker-compose.dev.yaml -f .codex/docker-compose.codex.yaml run --rm --no-deps pytools "python -m pip install -U pip >/dev/null && python -m pip install -q 'ruff>=0.1' && ruff check backend"`
+- [ ] Frontend formatting: `docker compose -f docker-compose.yaml -f docker-compose.dev.yaml run --rm --no-deps airis-frontend sh -lc "npm run format"`
+- [ ] Frontend lint/typecheck: `docker compose -f docker-compose.yaml -f docker-compose.dev.yaml run --rm --no-deps airis-frontend sh -lc "npm run lint:frontend && npm run check"`
+
+## 6. Documentation
+
+- [ ] Update Memory Bank docs if architecture/commands/config changed
+- [ ] Update user/deploy/billing docs if feature affects them
+
+## 7. Completion
+
+- [ ] Log task status update per **[../guides/task_updates.md](../guides/task_updates.md)** to "Done"
+- [ ] Use detailed commit message template from **[../guides/commit_messages.md](../guides/commit_messages.md)**
+- [ ] Create commit(s) with Conventional Commits messages (`feat: ...`, `docs: ...`)
+- [ ] Push branch and open PR to `{{integration_branch}}` (do not target `main` directly)

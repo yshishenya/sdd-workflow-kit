@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# managed-by: sdd-workflow-kit (kit-version: {{kit_version}})
+set -euo pipefail
+
+repo_root=$(git rev-parse --show-toplevel)
+
+git config core.hooksPath "$repo_root/.githooks"
+git config commit.template "$repo_root/.gitmessage"
+
+echo "Configured core.hooksPath to $repo_root/.githooks"
+echo "Configured commit.template to $repo_root/.gitmessage"

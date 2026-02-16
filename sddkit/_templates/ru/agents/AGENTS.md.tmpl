@@ -1,0 +1,40 @@
+# Инструкции для агента (managed)
+
+Этот репозиторий использует **Spec-Driven Development (SDD)** и общий toolchain.
+
+## Сводка проекта
+
+- Языки: `{{languages}}`
+- Пакетные менеджеры: `{{package_managers}}`
+- Версия sdd-workflow-kit: `{{kit_version}}`
+
+## Процесс (SDD)
+
+- Сначала спецификация/план, потом код.
+- Документация должна быть исполнимой (верификация реальными командами).
+- Декомпозируй на атомарные задачи (желательно 1 файл на задачу).
+
+## Команды (эвристика)
+
+- Установка: `{{install_cmd}}`
+- Тесты: `{{test_cmd}}`
+- Линт: `{{lint_cmd}}`
+- Формат: `{{format_cmd}}`
+
+## Скиллы
+
+Скиллы живут в `{{codex_home}}/skills` (global) или `.codex/skills` (внутри проекта).
+
+Установка скиллов из этого kit:
+
+- Global: `python3 {{kit_path}}/bin/sdd-kit install-skills --project . --to global`
+- В проект: `python3 {{kit_path}}/bin/sdd-kit install-skills --project . --to project`
+
+### Доступные скиллы
+{{skills_block}}
+
+## Локальные добавки (без конфликтов)
+
+Не правь managed-файлы руками. Добавляй инструкции сюда:
+
+- `.sddkit/fragments/AGENTS.append.md`

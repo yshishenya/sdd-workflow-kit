@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sdd-workflow-kit"
+version = "0.1.0"
+description = "Universal SDD workflow + skills bootstrap/sync tool"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "Your Org" }]
+dependencies = []
+
+[project.scripts]
+sdd-kit = "sddkit.cli:main"
+
+[tool.setuptools]
+packages = ["sddkit"]
+
+[tool.setuptools.package-data]
+sddkit = ["_templates/**/*"]

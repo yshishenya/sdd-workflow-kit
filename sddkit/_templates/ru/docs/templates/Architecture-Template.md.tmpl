@@ -1,0 +1,23 @@
+# Architecture Overview
+
+## Scoping (read first)
+
+- Это карта системы, чтобы не сканировать весь репозиторий.
+- Ссылайся на entry points, ключевые документы и ключевые пути в коде.
+
+## Summary
+
+## System/Module Map
+
+```mermaid
+flowchart LR
+  UI["UI"] -->|"HTTP"| API["API"]
+  API -->|"calls"| CORE["Core"]
+```
+
+## Module Index
+
+## Dependency Rules
+
+## Key Decisions (ADRs)
+
