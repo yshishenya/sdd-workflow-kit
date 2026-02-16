@@ -1,66 +1,323 @@
 # sdd-workflow-kit
 
-Universal repo you can pull into any project to bootstrap and keep in sync:
+Универсальный kit для упаковки и повторного использования вашего процесса разработки (workflow), Spec-Driven Development (SDD), инструкций для агента (например, `AGENTS.md`) и наборов “скиллов” в любом репозитории.
 
-- `AGENTS.md` (agent instructions + skill registry)
-- SDD scaffolding (`docs/templates/*`, `docs/Architecture/*`, `docs/ADR/*`, `docs/Features/*`, `specs/*`)
-- Memory Bank scaffolding (optional, Airis-style: `meta/memory_bank/*`)
-- Meta SDD scaffolding (optional: `meta/sdd/*` + wrapper `meta/tools/sdd`)
-- GitHub Actions check workflow (non-invasive, adds new workflow only)
-- Optional Codex skills packaging (imports from `~/.codex/skills` into this repo, then can install elsewhere)
+Подключается в проект как `git submodule`, после чего одной командой безопасно (без перетирания ваших файлов) добавляет и держит в синхронизации “управляемые” файлы: инструкции, scaffolding, wrapper-скрипты и CI-проверку дрейфа.
 
-## What "safe" means
+---
 
-- The kit only writes files it **manages** (it adds a `managed-by: sdd-workflow-kit` header).
-- If a file already exists and is **not** managed, `sync` will **skip** it.
-- `check` will **fail** on files that should be managed but are not (so you notice conflicts early).
+## Зачем это нужно
 
-## Quick start (inside a target project)
+Типичная проблема: у вас есть хороший процесс (воркфлоу, SDD, стандарты кодинга, туллинг, agent-настройки), но каждый новый репозиторий приходится настраивать вручную, а изменения в процессе тяжело “разнести” по всем проектам.
 
-1. Add this repo as a submodule (recommended path):
-   - `git submodule add <YOUR_GIT_URL> .tooling/sdd-workflow-kit`
+Этот репозиторий решает задачу так:
 
-2. Bootstrap the project (safe defaults: never overwrite unmanaged files):
-   - `python3 .tooling/sdd-workflow-kit/bin/sdd-kit bootstrap --project .`
-   - If you want Memory Bank + `meta/*` scaffolds in a new repo: `python3 .tooling/sdd-workflow-kit/bin/sdd-kit bootstrap --project . --profile airis`
+- Есть один “источник правды” (этот kit).
+- Каждый проект подключает kit (как submodule) и синхронизирует управляемые файлы.
+- Управляемые файлы обновляются идемпотентно и безопасно.
+- CI может проверять, что проект не “уплыл” от стандарта.
 
-3. Keep files up to date:
-   - `python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .`
+---
 
-4. CI drift check (optional): commit the generated workflow
-   - `.github/workflows/sdd-kit-check.yml`
+## Что именно умеет kit
 
-## Configure per-project
+- Генерировать и обновлять `AGENTS.md` (инструкции агенту) из шаблона.
+- (Опционально) создавать и поддерживать “Memory Bank” (`meta/memory_bank/*`) как единый навигационный слой по процессам/стеку/паттернам.
+- (Опционально) добавлять `meta/sdd/*` и wrapper-скрипты в `meta/tools/*` (для SDD и служебных утилит).
+- (Опционально) добавлять CI workflow для проверки дрейфа или использовать готовый composite GitHub Action.
+- Импортировать локальные Codex skills из `~/.codex/skills` в `skillpacks/*` и устанавливать их в проекты (или в глобальный CODEX_HOME).
 
-Edit `.sddkit/config.toml`:
+---
 
-- Disable anything you don't want managed (example: if you already have a hand-written `AGENTS.md`):
-  - `[manage] agents_md = false`
-- Change where the kit lives in the repo:
-  - `[github] kit_path = ".tooling/sdd-workflow-kit"`
-- Decide whether CI should fail when the kit is not bootstrapped:
-  - `[github] fail_on_missing_config = false`
+## Гарантия “безопасности” (не ломает ваш проект)
 
-Add local agent instructions without touching the managed file:
+Kit работает в режиме “управляемых файлов”.
 
-- `.sddkit/fragments/AGENTS.append.md`
+Правила:
 
-## Quick start (build your org skillpack once)
+- Kit пишет и обновляет только файлы, которые сам пометил как управляемые.
+- Если файл уже существует и он не управляемый, kit его не трогает и пропускает.
+- Любые изменения воспроизводимы: `sync` можно запускать сколько угодно раз.
 
-Import your currently installed Codex skills into this repo:
+Маркер управления выглядит так и находится в начале файла:
 
-- `python3 bin/sdd-kit import-codex-skills --from /Users/$USER/.codex/skills --pack codex`
+```text
+managed-by: sdd-workflow-kit
+```
 
-This will populate `skillpacks/codex/skills/*` so the kit becomes self-contained.
+---
 
-Install that skillpack into a project (project-local) or into CODEX_HOME (global):
+## Быстрый старт (внутри целевого проекта)
 
-- Project: `python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --to project`
-- Global: `python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --to global`
+### 1) Подключить kit как submodule
 
-## Design principles
+Рекомендуемый путь в репозитории:
 
-- Idempotent: running `sync` multiple times is safe.
-- Non-destructive: never overwrites files it does not manage.
-- Managed marker: generated files include `managed-by: sdd-workflow-kit` in the header.
-- Extensible: templates and profiles live in `sddkit/_templates/`.
+```bash
+git submodule add git@github.com:yshishenya/sdd-workflow-kit.git .tooling/sdd-workflow-kit
+```
+
+### 2) Bootstrap (создать конфиг и сгенерировать управляемые файлы)
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit bootstrap --project . --locale ru
+```
+
+Если вы создаете новый репозиторий и хотите сразу Memory Bank + `meta/*` scaffolding (Airis-профиль):
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit bootstrap --project . --locale ru --profile airis
+```
+
+### 3) Дальше поддерживать синхронизацию
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
+```
+
+### 4) Проверка дрейфа (локально и в CI)
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit check --project .
+```
+
+---
+
+## Команды CLI
+
+CLI доступен как скрипт:
+
+- Внутри проекта (через submodule): `.tooling/sdd-workflow-kit/bin/sdd-kit`
+- Внутри самого kit: `bin/sdd-kit`
+
+Команды:
+
+| Команда | Назначение |
+| --- | --- |
+| `detect` | Определить характеристики проекта (языки, package managers) |
+| `bootstrap` | Создать `.sddkit/config.toml` (если его нет) и выполнить `sync` |
+| `sync` | Синхронизировать управляемые файлы (безопасно, идемпотентно) |
+| `check` | Проверить, что управляемые файлы актуальны (удобно для CI) |
+| `import-codex-skills` | Импортировать skills из CODEX_HOME в `skillpacks/*` этого репо |
+| `install-skills` | Установить skillpack в проект или глобально |
+
+Подсказка по флагам:
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit --help
+```
+
+---
+
+## Конфигурация проекта: `.sddkit/config.toml`
+
+`bootstrap` создаст конфиг автоматически. Дальше вы настраиваете, что именно kit должен “вести”.
+
+Пример (минимально важные части):
+
+```toml
+[sddkit]
+locale = "ru"
+safe_mode = true
+profile = "generic"
+
+[manage]
+agents_md = true
+github_workflow = true
+memory_bank = false
+meta_tools = false
+meta_sdd = false
+docs_scaffold = false
+specs_scaffold = false
+codex_scaffold = false
+
+[github]
+kit_path = ".tooling/sdd-workflow-kit"
+config = ".sddkit/config.toml"
+fail_on_missing_config = false
+```
+
+Важные принципы:
+
+- `safe_mode = true` означает “не перезаписывать чужие (неуправляемые) файлы”.
+- Если у вас уже есть свой `AGENTS.md`, вы можете отключить его управление: `agents_md = false`.
+
+---
+
+## Как добавлять локальные инструкции агенту, не трогая управляемый файл
+
+Если `AGENTS.md` управляется kit-ом, но вам нужно добавить проектные детали, используйте фрагмент:
+
+```text
+.sddkit/fragments/AGENTS.append.md
+```
+
+Дальше выполните:
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
+```
+
+---
+
+## Профили (адаптация под тип проекта)
+
+При создании нового конфига `bootstrap` может использовать пресет:
+
+- `generic`: максимально нейтральный профиль.
+- `airis`: профиль с Memory Bank и `meta/*` scaffolding под Airis-подход.
+- `auto`: выбрать профиль автоматически (используется по умолчанию при bootstrap).
+
+Важно: `--profile` влияет только на первичное создание конфига. Дальше все контролируется значениями в `.sddkit/config.toml`.
+
+---
+
+## Локализация шаблонов
+
+Поддерживаются локали `en` и `ru`.
+
+Выбор:
+
+- Через `.sddkit/config.toml`: `[sddkit] locale = "ru"`
+- На один запуск: `--locale ru`
+
+Шаблоны лежат в `sddkit/_templates/<locale>/...`.
+
+---
+
+## Skillpacks: перенос и установка “скиллов”
+
+### 1) Снять “снимок” ваших локальных Codex skills в этот репозиторий
+
+```bash
+python3 bin/sdd-kit import-codex-skills --from "$HOME/.codex/skills" --pack codex
+```
+
+После этого skillpack будет жить в `skillpacks/codex/skills/*`, а kit станет самодостаточным.
+
+### 2) Установить skillpack в проект
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --to project
+```
+
+### 3) Установить skillpack глобально (в CODEX_HOME)
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --to global
+```
+
+Рекомендуемая практика:
+
+- Держать skillpacks в этом репо как “официальный набор” для организации.
+- Устанавливать “project” режимом в репозитории, где нужно зафиксировать версию skills рядом с кодом.
+
+---
+
+## CI: проверка дрейфа в GitHub Actions
+
+Есть два подхода.
+
+### Подход A: коммитить сгенерированный workflow в проект
+
+Kit может создать `.github/workflows/sdd-kit-check.yml` (если включено `github_workflow = true`).
+
+Логика простая: в CI выполняется `sdd-kit check`.
+
+### Подход B: использовать готовый composite action из этого репозитория
+
+Пример workflow:
+
+```yaml
+name: sdd-kit-check
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: yshishenya/sdd-workflow-kit@main
+        with:
+          project_root: "."
+          config: ".sddkit/config.toml"
+          fail_on_missing_config: "false"
+```
+
+Best practice:
+
+- Пинить action на тег или SHA, а не на `main`, чтобы сборки были воспроизводимыми.
+
+---
+
+## Обновление kit в проекте (рекомендованный процесс)
+
+1. Обновить submodule на новую версию (git pull внутри submodule или обновление указателя).
+2. Выполнить `sync`.
+3. Закоммитить изменения управляемых файлов вместе с обновлением submodule.
+
+---
+
+## Как расширять kit под вашу организацию
+
+Схема расширения:
+
+- Добавляйте/правьте шаблоны в `sddkit/_templates/`.
+- Добавляйте новые scaffolds и включайте их флагами в `[manage]`.
+- При необходимости добавляйте новый профиль и его дефолты в коде (профилизация нужна только для bootstrap).
+
+Важный принцип: любые изменения должны сохранять “safe mode” и не перетирать неуправляемые файлы.
+
+---
+
+## LLM-подсказка для адаптации под произвольный проект
+
+Готовый промпт для LLM лежит в `LLM_ADAPTATION_PROMPT.md`.
+
+Он удобен для сценария:
+
+- “Вот репозиторий, вот его стек и ограничения, вот вывод `sdd-kit detect`”
+- “Подбери `config.toml` и минимальный набор scaffolds, не ломая существующее”
+
+---
+
+## Требования
+
+- Git (для submodule)
+- Python 3.11+ (для запуска CLI)
+
+---
+
+## FAQ
+
+### Kit пропускает файл, который я хотел бы обновлять
+
+Скорее всего файл уже существует и не помечен как управляемый. По правилам безопасности kit не будет его трогать.
+
+Варианты:
+
+- Перенесите содержимое вручную в “управляемый” файл и удалите/переименуйте старый.
+- Отключите управление этим файлом через `[manage]`.
+
+### Как посмотреть план изменений, не записывая файлы
+
+Используйте dry-run:
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project . --dry-run
+```
+
+---
+
+## Contributing
+
+Если вы развиваете kit внутри команды:
+
+- Держите изменения максимально аддитивными (новые шаблоны/скеффолды вместо правки поведения).
+- Проверяйте, что `sync` идемпотентен и безопасен.
+- Перед мерджем прогоняйте `sdd-kit check` на примерах проектов.
