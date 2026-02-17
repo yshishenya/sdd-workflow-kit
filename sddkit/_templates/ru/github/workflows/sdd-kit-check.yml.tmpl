@@ -11,9 +11,12 @@ jobs:
       - uses: actions/checkout@v5
         with:
           submodules: recursive
-      - name: sdd-kit check
-        uses: ./{{kit_path}}
+      - uses: actions/setup-python@v6
         with:
-          project_root: .
-          config: {{config_path}}
-          fail_on_missing_config: "{{fail_on_missing_config}}"
+          python-version: "3.11"
+      - name: sdd-kit check
+        run: >
+          python ./.tooling/sdd-workflow-kit/bin/sdd-kit check
+          --project "."
+          --config "{{config_path}}"
+          --fail-on-missing-config="{{fail_on_missing_config}}"
