@@ -66,12 +66,8 @@ def _project_rel(p: Path, root: Path) -> str:
 
 
 def _assert_no_duplicate_plan_targets(plan: list[PlanItem], *, project_root: Path) -> None:
-    """Guard against accidental duplicate plan entries.
 
-    If two items target the same path, the second one would overwrite/compete
-    with the first, and behavior becomes order-dependent and hard to reason about.
-    """
-
+    """Guard against accidental duplicate plan entries."""
     seen: dict[Path, PlanItem] = {}
     for item in plan:
         if isinstance(item, PlannedSkip):
@@ -87,6 +83,23 @@ def _assert_no_duplicate_plan_targets(plan: list[PlanItem], *, project_root: Pat
 
 
 def _infer_commands(detection: dict[str, str]) -> dict[str, str]:
+    """Infer command-line instructions based on detected languages and package
+    managers.
+    
+    This function analyzes the provided `detection` dictionary to determine the
+    appropriate installation, testing, linting, and formatting commands for various
+    programming languages and their associated package managers. It constructs
+    commands for Python and Node.js environments, considering specific package
+    managers like `uv`, `pnpm`, `yarn`, and `bun`. If no suitable commands are
+    found, it provides a default message indicating that definitions should be made
+    in the `.sddkit/config.toml` file.
+    
+    Args:
+        detection (dict[str, str]): A dictionary containing detected languages and package managers.
+    
+    Returns:
+        dict[str, str]: A dictionary mapping command types to their respective command strings.
+    """
     langs = set((detection.get("languages") or "").split(","))
     pms = set((detection.get("package_managers") or "").split(","))
 
@@ -606,6 +619,26 @@ def sync_project(
     skills_install_to: str | None = None,
     skills_install_only: bool = False,
 ) -> None:
+    """Synchronize project files and manage skill installations.
+    
+    This function orchestrates the synchronization of project files based on the
+    provided configuration and detection parameters. It generates a plan for
+    writing files, copying directories, and ensuring the existence of specified
+    targets. The function also handles skill installations if specified, and
+    manages the AGENTS.md file in speckit mode to maintain consistency with the
+    overlay fragment.
+    
+    Args:
+        project_root (Path): The root directory of the project.
+        config_path (Path): The path to the configuration file.
+        cfg (SddKitConfig): The configuration object containing settings.
+        detection (dict[str, str]): A dictionary for detection parameters.
+        locale (str): The locale to be used for the operation.
+        dry_run (bool): If True, performs a dry run without making changes.
+        skills_install_pack (str | None): Optional package for skill installation.
+        skills_install_to (str | None): Optional destination for skill installation.
+        skills_install_only (bool): If True, only installs skills without syncing files.
+    """
     kit_root = _kit_root()
     plan: list[PlanItem] = []
     if not skills_install_only:

@@ -166,6 +166,15 @@ def _split_frontmatter(text: str) -> tuple[list[str], str]:
 
 
 def _extract_variant_value(frontmatter_lines: list[str], *, key: str, variant: str) -> str | None:
+    """Extracts the value of a specified variant from frontmatter lines.
+    
+    This function scans through a list of frontmatter lines to locate a specific
+    key and then retrieves the corresponding value for a given variant. It begins
+    by identifying the section associated with the key and continues to parse the
+    lines until it encounters a new top-level key or finds the desired variant.
+    Blank and comment lines are ignored during this process to ensure accurate
+    extraction of the variant value.
+    """
     in_section = False
     for line in frontmatter_lines:
         if not in_section:
@@ -183,6 +192,21 @@ def _extract_variant_value(frontmatter_lines: list[str], *, key: str, variant: s
 
 
 def _strip_frontmatter_sections(text: str, *, sections: set[str]) -> str:
+    """Strip specified frontmatter sections from a given text.
+    
+    This function processes the input `text` to remove designated frontmatter
+    sections enclosed by `---`. It identifies the start and end of the frontmatter
+    and selectively skips lines based on the provided `sections`. The function
+    preserves the structure of the remaining content, ensuring that any blank or
+    comment lines are retained while removing the specified sections.
+    
+    Args:
+        text (str): The input text containing frontmatter sections.
+        sections (set[str]): A set of section names to be stripped from the frontmatter.
+    
+    Returns:
+        str: The modified text with specified frontmatter sections removed.
+    """
     lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
         return text
