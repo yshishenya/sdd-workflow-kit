@@ -1,17 +1,238 @@
-# SDD (Spec-Driven Development)
+# SDD Workflow (Spec Kit + sdd-kit overlay)
 
-Этот репозиторий использует SDD: сначала спецификация/план, затем реализация, затем верификация.
+> Tooling: `sdd-workflow-kit {{kit_version}}`
 
-## Структура папок
+Этот репозиторий использует Spec-Driven Development (SDD) в гибридном режиме:
 
-- `docs/ADR/`: архитектурные решения
-- `docs/Features/`: спеки поведения фич
-- `docs/Architecture/`: карта системы и границы
-- `docs/templates/`: шаблоны документов
-- `specs/`: машиночитаемые спеки (pending/active/completed)
+- **SDD ядро**: GitHub **Spec Kit** (markdown пайплайн `spec.md → plan.md → tasks.md → implement`)
+- **Overlay**: `sdd-kit` (установка/пины/дрейф-чек managed файлов, навыки/скеффолды по желанию)
 
-## Базовые правила
+## TL;DR
 
-- Без догадок: спеки и доки должны быть исполнимыми и тестируемыми.
-- Атомарные задачи: по возможности 1 файл на задачу.
+### Разработчику (ежедневная работа)
 
+1. `speckit.specify` → создаст ветку `001-...` и `specs/001-.../spec.md`
+2. `speckit.plan` → создаст `specs/001-.../plan.md` (+ артефакты) и обновит контекст агента
+3. `speckit.tasks` → создаст `specs/001-.../tasks.md`
+4. `speckit.implement` → реализуй задачи по одной, запускай тесты/линт
+5. Перед PR: `python3 .tooling/sdd-workflow-kit/bin/sdd-kit check --project .`
+
+### Админу репозитория (обновления и контроль)
+
+1. Всегда подтягивай submodules рекурсивно: `git submodule update --init --recursive`
+2. Обновление toolchain: обнови `.tooling/sdd-workflow-kit` до нового тега, затем `sync` и `check`
+
+## Как это работает (схема)
+
+```mermaid
+flowchart LR
+  subgraph "Developer / Agent"
+    A["speckit.specify"]
+    B["speckit.plan"]
+    C["speckit.tasks"]
+    D["speckit.implement"]
+  end
+
+  subgraph "Spec Kit (SDD core)"
+    S1[".specify/scripts/*"]
+    S2[".specify/templates/*"]
+    O1["specs/###-*/spec.md"]
+    O2["specs/###-*/plan.md"]
+    O3["specs/###-*/tasks.md"]
+    AG["AGENTS.md (auto-updated)"]
+  end
+
+  subgraph "sdd-kit overlay"
+    K1["sdd-kit sync (install/pin)"]
+    K2["sdd-kit check (drift gate)"]
+    F[".sddkit/fragments/AGENTS.manual.md"]
+  end
+
+  K1 --> S1
+  K1 --> S2
+  K1 -->|"generate"| P[".codex/prompts/speckit.*.md"]
+
+  A -->|"runs script"| S1 --> O1
+  B -->|"runs script"| S1 --> O2
+  B -->|"update-agent-context"| AG
+  C --> O3
+  D -->|"code/test"| R["repo changes"]
+
+  F -->|"patch MANUAL block"| AG
+  K2 -->|"CI/local gate"| R
+```
+
+## Где что лежит (структура)
+
+```text
+.sddkit/
+  config.toml                  # настройки sdd-kit (ручные)
+  fragments/
+    AGENTS.manual.md           # overlay для MANUAL-блока в AGENTS.md (редактируй это)
+
+.specify/                      # managed: Spec Kit templates/scripts (ставит sdd-kit)
+  templates/                   # шаблоны: spec/plan/tasks/...
+  scripts/
+    bash/                      # sh-скрипты (mac/linux)
+    powershell/                # ps-скрипты (windows)
+  memory/
+    constitution.md            # принципы/конституция (создается если нет; можно править руками)
+  THIRD_PARTY_NOTICES.md       # managed: лицензии/атрибуция upstream Spec Kit
+
+.codex/prompts/                # managed: команды для Codex (speckit.*)
+  speckit.specify.md
+  speckit.plan.md
+  speckit.tasks.md
+  speckit.implement.md
+
+specs/                         # NOT managed: артефакты фич (создает Spec Kit)
+  001-feature-name/
+    spec.md
+    plan.md
+    tasks.md
+```
+
+## Что кем управляется (ownership)
+
+| Область | Владелец | `sdd-kit check` | Как править |
+| --- | --- | --- | --- |
+| `.specify/templates/*` | sdd-kit (из Spec Kit upstream) | да | не править руками; обновлять через `sync`/обновление kit |
+| `.specify/scripts/*` | sdd-kit (из Spec Kit upstream) | да | не править руками; обновлять через `sync`/обновление kit |
+| `.specify/memory/constitution.md` | вы | **нет** (только ensure exists) | править руками (это нормально) |
+| `.codex/prompts/speckit.*.md` | sdd-kit (генерация из upstream templates/commands) | да | не править руками; обновлять через `sync` |
+| `specs/**` | Spec Kit workflow | нет | править руками в рамках фичи |
+| `AGENTS.md` | Spec Kit (`update-agent-context`) + overlay | частично (только MANUAL блок) | ручные добавки только через `.sddkit/fragments/AGENTS.manual.md` |
+
+## Ежедневный цикл (подробно)
+
+### 0) (Опционально) обновить/проверить конституцию
+
+- Команда: `speckit.constitution`
+- Файл: `.specify/memory/constitution.md`
+
+### 1) Создать фичу
+
+Рекомендуемый путь: через агент-команду `speckit.specify`.
+
+Скрипт руками (без агента):
+
+```bash
+bash .specify/scripts/bash/create-new-feature.sh "Короткое описание фичи"
+```
+
+Результат:
+
+- создаст ветку `001-...`
+- создаст `specs/001-.../spec.md`
+
+### 2) Планирование
+
+Команда: `speckit.plan`.
+
+Скрипт руками:
+
+```bash
+bash .specify/scripts/bash/setup-plan.sh
+```
+
+Результат:
+
+- создаст/перезапишет `specs/001-.../plan.md` на основе шаблона
+- на этапе `plan` обычно вызывается `update-agent-context`, который обновляет `AGENTS.md`
+
+### 3) Декомпозиция на задачи
+
+Команда: `speckit.tasks`.
+
+Результат:
+
+- создаст/обновит `specs/001-.../tasks.md`
+
+### 4) Имплементация
+
+Команда: `speckit.implement`.
+
+Правила, которые помогают не “уплыть”:
+
+- Делай задачи по одной (малые диффы).
+- После каждой логической группы задач запускай реальные проверки (тесты/линт/сборка).
+- Если что-то меняется в требованиях: обнови `spec.md`/`plan.md`/`tasks.md` прежде чем кодить дальше.
+
+### 5) Drift-check перед PR
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit check --project .
+```
+
+Если есть `DRIFT`/`MISSING`:
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
+```
+
+## CI (GitHub Actions)
+
+Критично: в CI checkout должен быть с `submodules: recursive` (иначе не будет `upstreams/spec-kit`).
+
+Стандартный путь: коммитить `.github/workflows/sdd-kit-check.yml` и запускать `sdd-kit check`.
+
+## Админ: как обновлять систему
+
+### Обновить `sdd-workflow-kit` в проекте
+
+1. Перейти в submodule:
+
+```bash
+cd .tooling/sdd-workflow-kit
+git fetch --tags origin
+git checkout vX.Y.Z
+cd ../..
+git add .tooling/sdd-workflow-kit
+git commit -m "chore: bump sdd-workflow-kit to vX.Y.Z"
+```
+
+2. Подтянуть nested submodules:
+
+```bash
+git submodule update --init --recursive
+```
+
+3. Обновить managed файлы и проверить дрейф:
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit check --project .
+git add -A
+git commit -m "chore: sync managed files"
+```
+
+### Включить Memory Bank (опционально)
+
+В `.sddkit/config.toml`:
+
+```toml
+[manage]
+memory_bank = true
+meta_tools = true
+meta_sdd = true
+```
+
+Затем:
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
+```
+
+## Troubleshooting
+
+### `UNMANAGED ... (safe_mode)`
+
+Значит файл уже существует и не помечен как managed. Варианты:
+
+- удалить/переименовать файл и снова `sync`
+- отключить управление этим файлом в `[manage]`
+- (не рекомендуется) временно выключить `safe_mode`
+
+### Spec Kit скрипты ругаются на ветку
+
+Spec Kit ожидает ветки вида `001-feature-name`. Создавай фичи через `speckit.specify` (он создаст ветку правильно).

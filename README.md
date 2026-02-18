@@ -1,8 +1,25 @@
 # sdd-workflow-kit
 
+[![smoke-speckit](https://github.com/yshishenya/sdd-workflow-kit/actions/workflows/smoke-speckit.yml/badge.svg)](https://github.com/yshishenya/sdd-workflow-kit/actions/workflows/smoke-speckit.yml)
+[![release](https://img.shields.io/github/v/release/yshishenya/sdd-workflow-kit)](https://github.com/yshishenya/sdd-workflow-kit/releases)
+[![python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
+
 Универсальный kit для упаковки и повторного использования вашего процесса разработки (workflow), Spec-Driven Development (SDD), инструкций для агента (например, `AGENTS.md`) и наборов “скиллов” в любом репозитории.
 
 Подключается в проект как `git submodule`, после чего одной командой безопасно (без перетирания ваших файлов) добавляет и держит в синхронизации “управляемые” файлы: инструкции, scaffolding, wrapper-скрипты и CI-проверку дрейфа.
+
+## Содержание
+
+- [Зачем это нужно](#зачем-это-нужно)
+- [Что именно умеет kit](#что-именно-умеет-kit)
+- [Как это работает (схема)](#как-это-работает-схема)
+- [Быстрый старт (внутри целевого проекта)](#быстрый-старт-внутри-целевого-проекта)
+- [Команды CLI](#команды-cli)
+- [Конфигурация проекта: `.sddkit/config.toml`](#конфигурация-проекта-sddkitconfigtoml)
+- [CI: проверка дрейфа в GitHub Actions](#ci-проверка-дрейфа-в-github-actions)
+- [Обновление kit в проекте](#обновление-kit-в-проекте-рекомендованный-процесс)
+- [Обновление upstream Spec Kit (внутри этого репозитория)](#обновление-upstream-spec-kit-внутри-этого-репозитория)
+- [FAQ](#faq)
 
 ---
 
@@ -27,6 +44,50 @@
 - (Опционально) добавлять `meta/sdd/*` и wrapper-скрипты в `meta/tools/*` (для SDD и служебных утилит).
 - (Опционально) добавлять CI workflow для проверки дрейфа или использовать готовый composite GitHub Action.
 - Импортировать локальные Codex skills из `~/.codex/skills` в `skillpacks/*` и устанавливать их в проекты (или в глобальный CODEX_HOME).
+
+---
+
+## Как это работает (схема)
+
+Важная идея: **Spec Kit** отвечает за SDD-пайплайн фич (`spec → plan → tasks → implement`), а **sdd-kit** ставит и пинит инфраструктуру (скрипты/шаблоны/промпты) и делает drift-check в CI.
+
+```mermaid
+flowchart LR
+  subgraph "Target repo"
+    subgraph "Spec Kit core"
+      O1["specs/###-*/spec.md"]
+      O2["specs/###-*/plan.md"]
+      O3["specs/###-*/tasks.md"]
+      SK[".specify/*"]
+    end
+
+    subgraph "Agent UX"
+      P[".codex/prompts/speckit.*.md"]
+      C[".claude/commands/speckit.*.md (optional)"]
+    end
+
+    subgraph "Overlay (sdd-kit)"
+      CFG[".sddkit/config.toml"]
+      FRAG[".sddkit/fragments/AGENTS.manual.md"]
+      CI["sdd-kit check (CI)"]
+    end
+
+    AG["AGENTS.md (Spec Kit updates + MANUAL overlay)"]
+  end
+
+  KSYNC["sdd-kit sync"] --> SK
+  KSYNC --> P
+  KSYNC --> C
+  FRAG --> AG
+  CI -->|"fails on DRIFT/MISSING/UNMANAGED"| Target repo
+  SK -->|"scripts create/update"| O1
+  SK -->|"scripts create/update"| O2
+  SK -->|"agent writes"| O3
+```
+
+Где читать “как работать” в конкретном проекте:
+
+- `docs/SDD/README.md` (managed документ, обновляется `sdd-kit sync`)
 
 ---
 
