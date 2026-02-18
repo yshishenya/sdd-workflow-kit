@@ -737,9 +737,9 @@ def sync_project(
     This function orchestrates the synchronization of project files based on the
     provided configuration and detection parameters. It generates a plan for
     writing files, copying directories, and ensuring the existence of specified
-    targets. The function also handles skill installations if specified, and
-    manages the AGENTS.md file in speckit mode to maintain consistency with the
-    overlay fragment.
+    targets. Additionally, it handles skill installations if specified and manages
+    the AGENTS.md file in speckit mode to maintain consistency with the overlay
+    fragment.
     
     Args:
         project_root (Path): The root directory of the project.
@@ -908,8 +908,26 @@ def _plan_speckit_skill_install(
     detection: dict[str, str],
     dest: str,
 ) -> list[PlanItem]:
-    """Install generated speckit Codex skills into project or global CODEX_HOME."""
 
+    """Install generated speckit Codex skills into project or global CODEX_HOME.
+    
+    This function determines the output directory for the skills based on the
+    provided destination, either within a project or globally. It ensures the
+    necessary upstream components are available, generates command prompts for each
+    skill, and prepares a plan for writing the skills to the specified location.
+    Additionally, it handles the creation of an overlay for plan review,
+    incorporating project-specific details such as languages and package managers.
+    
+    Args:
+        project_root (Path): The root directory of the project.
+        kit_root (Path): The root directory of the skill kit.
+        cfg (SddKitConfig): Configuration settings for the speckit skills.
+        detection (dict[str, str]): A dictionary containing detection information.
+        dest (str): The destination for the skills, either "project" or "global".
+    
+    Returns:
+        list[PlanItem]: A list of planned actions for installing the skills.
+    """
     if dest == "project":
         out_root = project_root / cfg.codex_root / "skills"
     elif dest == "global":
