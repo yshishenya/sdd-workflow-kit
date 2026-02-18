@@ -10,11 +10,21 @@ from pathlib import Path
 
 
 def run(cmd: list[str], *, cwd: Path) -> None:
+    """Execute a command in a specified directory."""
     print("+", " ".join(cmd))
     subprocess.run(cmd, cwd=str(cwd), check=True)
 
 
 def main() -> int:
+    """Run the main process for bootstrapping the Airis profile.
+    
+    This function initializes a temporary Git repository, configures it,  and adds
+    the sdd-workflow-kit as a submodule. It then bootstraps the  project using the
+    specified Airis profile and checks for required files.  If any expected files
+    are missing or if the necessary executables are  not set, it raises an error.
+    The temporary directory can be kept for  debugging based on the command-line
+    argument provided.
+    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--keep", action="store_true", help="Keep the temporary repo directory on success/failure")
     ns = ap.parse_args()
