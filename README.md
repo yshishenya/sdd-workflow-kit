@@ -22,6 +22,7 @@
 ## Что именно умеет kit
 
 - Генерировать и обновлять `AGENTS.md` (инструкции агенту) из шаблона.
+- Устанавливать и держать в синхронизации Spec Kit (профиль `speckit`): `.specify/*` + `speckit.*` prompt-файлы для агента (Codex/Claude), с drift-check и без конфликта за владение `AGENTS.md`.
 - (Опционально) создавать и поддерживать “Memory Bank” (`meta/memory_bank/*`) как единый навигационный слой по процессам/стеку/паттернам.
 - (Опционально) добавлять `meta/sdd/*` и wrapper-скрипты в `meta/tools/*` (для SDD и служебных утилит).
 - (Опционально) добавлять CI workflow для проверки дрейфа или использовать готовый composite GitHub Action.
@@ -68,6 +69,18 @@ python3 .tooling/sdd-workflow-kit/bin/sdd-kit bootstrap --project . --locale ru
 ```bash
 python3 .tooling/sdd-workflow-kit/bin/sdd-kit bootstrap --project . --locale ru --profile airis
 ```
+
+Если вы хотите использовать GitHub Spec Kit как **каноничный SDD pipeline** (спеки в `specs/###-feature/*`, `.specify/*`, агент-команды `speckit.*`):
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit bootstrap --project . --profile speckit --locale en
+```
+
+В этом режиме kit:
+
+- Не создает legacy layout `specs/{pending,active,completed}`.
+- Не “владеет” файлом `AGENTS.md` целиком (Spec Kit обновляет его своим скриптом). Kit управляет только MANUAL-блоком (см. ниже).
+- Устанавливает `.specify/*` и генерирует `speckit.*.md` prompt-файлы в `.codex/prompts` (и/или `.claude/commands`).
 
 ### 3) Дальше поддерживать синхронизацию
 
@@ -129,6 +142,7 @@ meta_tools = false
 meta_sdd = false
 docs_scaffold = false
 specs_scaffold = false
+speckit = false
 codex_scaffold = false
 
 [github]
@@ -141,12 +155,34 @@ fail_on_missing_config = false
 
 - `safe_mode = true` означает “не перезаписывать чужие (неуправляемые) файлы”.
 - Если у вас уже есть свой `AGENTS.md`, вы можете отключить его управление: `agents_md = false`.
+- Если вы включили Spec Kit (`speckit = true`), рекомендуется отключить `agents_md` и `specs_scaffold` (профиль `speckit` делает это автоматически при bootstrap).
+
+### Spec Kit-опции
+
+```toml
+[manage]
+speckit = true
+
+[speckit]
+agent = "codex"        # codex|claude|all
+script_variant = "sh"  # sh|ps
+```
+
+Что делает `manage.speckit=true`:
+
+- Копирует `.specify/templates/*` (из `github/spec-kit`, кроме `templates/commands/*` и `vscode-settings.json`)
+- Копирует `.specify/scripts/bash/*` (или `powershell/*` при `script_variant="ps"`)
+- Создает `.specify/memory/constitution.md` только если файла нет (не дрейф-чекается по содержимому)
+- Генерирует prompt-файлы команд: `.codex/prompts/speckit.*.md` и/или `.claude/commands/speckit.*.md`
+- Создает `.specify/THIRD_PARTY_NOTICES.md` (MIT license + pin на версию upstream)
 
 ---
 
 ## Как добавлять локальные инструкции агенту, не трогая управляемый файл
 
-Если `AGENTS.md` управляется kit-ом, но вам нужно добавить проектные детали, используйте фрагмент:
+Есть два режима:
+
+- Если `AGENTS.md` управляется kit-ом (`manage.agents_md=true`), но вам нужно добавить проектные детали, используйте фрагмент:
 
 ```text
 .sddkit/fragments/AGENTS.append.md
@@ -158,6 +194,26 @@ fail_on_missing_config = false
 python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
 ```
 
+### Spec Kit mode: overlay только в MANUAL-блок
+
+В Spec Kit режиме (`manage.speckit=true`) kit **не** генерирует `AGENTS.md` целиком. Spec Kit обновляет его через `update-agent-context.*`.
+
+Kit управляет только блоком:
+
+```text
+<!-- MANUAL ADDITIONS START -->
+...
+<!-- MANUAL ADDITIONS END -->
+```
+
+Источник правды для этого блока:
+
+```text
+.sddkit/fragments/AGENTS.manual.md
+```
+
+`sync` патчит только этот блок (если `AGENTS.md` уже существует). `check` проверяет только этот блок, а не весь файл.
+
 ---
 
 ## Профили (адаптация под тип проекта)
@@ -166,6 +222,7 @@ python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
 
 - `generic`: максимально нейтральный профиль.
 - `airis`: профиль с Memory Bank и `meta/*` scaffolding под Airis-подход.
+- `speckit`: профиль, где **ядро SDD** идет через GitHub Spec Kit (`.specify/*`, `speckit.*` prompts), а kit остается overlay (skills/scaffolds/CI). Не управляет `AGENTS.md` целиком и не создает legacy `specs/{pending,active,completed}`.
 - `auto`: выбрать профиль автоматически (используется по умолчанию при bootstrap).
 
 Важно: `--profile` влияет только на первичное создание конфига. Дальше все контролируется значениями в `.sddkit/config.toml`.
@@ -260,6 +317,16 @@ Best practice:
 1. Обновить submodule на новую версию (git pull внутри submodule или обновление указателя).
 2. Выполнить `sync`.
 3. Закоммитить изменения управляемых файлов вместе с обновлением submodule.
+
+### Обновление upstream Spec Kit (внутри этого репозитория)
+
+Spec Kit vendored как submodule: `upstreams/spec-kit` (пинится по SHA).
+
+Процедура обновления:
+
+1. Обновить указатель submodule на нужный тег/коммит Spec Kit.
+2. Прогнать smoke: `python3 scripts/smoke_speckit.py`
+3. Обновить `THIRD_PARTY_NOTICES.md` (pin/tag/SHA) при необходимости.
 
 ---
 

@@ -15,7 +15,7 @@ except Exception:  # pragma: no cover
 class SddKitConfig:
     locale: str = "en"
     safe_mode: bool = True
-    profile: str = "auto"  # auto|generic|airis
+    profile: str = "auto"  # auto|generic|airis|speckit
     project_name: str = "Project"
     integration_branch: str = "main"
     is_fork: bool = False
@@ -32,6 +32,7 @@ class SddKitConfig:
     manage_github_workflow: bool = True
     manage_docs_scaffold: bool = True
     manage_specs_scaffold: bool = True
+    manage_speckit: bool = False
     manage_memory_bank: bool = False
     manage_meta_tools: bool = False
     manage_meta_sdd: bool = False
@@ -42,6 +43,9 @@ class SddKitConfig:
     github_kit_path: str = ".tooling/sdd-workflow-kit"
     github_config_path: str = ".sddkit/config.toml"
     github_fail_on_missing_config: bool = False
+
+    speckit_agent: str = "codex"
+    speckit_script_variant: str = "sh"  # sh|ps
 
 
 DEFAULT_CONFIG = SddKitConfig()
@@ -81,6 +85,7 @@ def load_config(config_path: Path | None) -> SddKitConfig:
         manage_github_workflow=bool(_deep_get(raw, "manage.github_workflow", DEFAULT_CONFIG.manage_github_workflow)),
         manage_docs_scaffold=bool(_deep_get(raw, "manage.docs_scaffold", DEFAULT_CONFIG.manage_docs_scaffold)),
         manage_specs_scaffold=bool(_deep_get(raw, "manage.specs_scaffold", DEFAULT_CONFIG.manage_specs_scaffold)),
+        manage_speckit=bool(_deep_get(raw, "manage.speckit", DEFAULT_CONFIG.manage_speckit)),
         manage_memory_bank=bool(_deep_get(raw, "manage.memory_bank", DEFAULT_CONFIG.manage_memory_bank)),
         manage_meta_tools=bool(_deep_get(raw, "manage.meta_tools", DEFAULT_CONFIG.manage_meta_tools)),
         manage_meta_sdd=bool(_deep_get(raw, "manage.meta_sdd", DEFAULT_CONFIG.manage_meta_sdd)),
@@ -90,6 +95,8 @@ def load_config(config_path: Path | None) -> SddKitConfig:
         github_kit_path=str(_deep_get(raw, "github.kit_path", DEFAULT_CONFIG.github_kit_path)),
         github_config_path=str(_deep_get(raw, "github.config", DEFAULT_CONFIG.github_config_path)),
         github_fail_on_missing_config=bool(_deep_get(raw, "github.fail_on_missing_config", DEFAULT_CONFIG.github_fail_on_missing_config)),
+        speckit_agent=str(_deep_get(raw, "speckit.agent", DEFAULT_CONFIG.speckit_agent)),
+        speckit_script_variant=str(_deep_get(raw, "speckit.script_variant", DEFAULT_CONFIG.speckit_script_variant)),
     )
     return cfg
 
@@ -108,12 +115,18 @@ def write_default_config(
     detected_profile = str(detection.get("recommended_profile") or "generic")
     profile = profile_override if profile_override and profile_override != "auto" else detected_profile
     integration_branch = "airis_b2c" if profile == "airis" else "main"
+
+    manage_agents_md = "false" if profile == "speckit" else "true"
+    manage_speckit = "true" if profile == "speckit" else "false"
     manage_memory_bank = "true" if profile == "airis" else "false"
     manage_meta_tools = "true" if profile == "airis" else "false"
     manage_meta_sdd = "true" if profile == "airis" else "false"
     manage_codex_scaffold = "true" if profile == "airis" else "false"
+
+    # In speckit mode we avoid the legacy lifecycle layout (`specs/{pending,active,completed}`).
+    # Docs scaffolds stay enabled (generic defaults) unless the airis profile is selected.
     manage_docs_scaffold = "false" if profile == "airis" else "true"
-    manage_specs_scaffold = "false" if profile == "airis" else "true"
+    manage_specs_scaffold = "false" if profile in {"airis", "speckit"} else "true"
     content = f"""[sddkit]
 locale = "{locale}"
 safe_mode = true
@@ -134,14 +147,19 @@ meta_sdd_root = "meta/sdd"
 codex_root = ".codex"
 
 [manage]
-agents_md = true
+agents_md = {manage_agents_md}
 github_workflow = true
 docs_scaffold = {manage_docs_scaffold}
 specs_scaffold = {manage_specs_scaffold}
+speckit = {manage_speckit}
 memory_bank = {manage_memory_bank}
 meta_tools = {manage_meta_tools}
 meta_sdd = {manage_meta_sdd}
 codex_scaffold = {manage_codex_scaffold}
+
+[speckit]
+agent = "codex"
+script_variant = "sh"
 
 [skills]
 default_pack = "codex"

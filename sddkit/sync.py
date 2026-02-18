@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,6 +10,7 @@ from typing import Any
 from . import __version__
 from .config import SddKitConfig
 from .managed import MANAGED_MARKER, ManagedFile, is_managed_file, managed_header
+from .speckit import ensure_speckit_upstream, generate_command_prompt, list_command_templates, list_script_files, list_template_files
 from .skills import list_skillpack_skills
 from .templates import list_template_names, load_template, render_template
 
@@ -40,7 +42,15 @@ class PlannedCopyDir:
     reason: str
 
 
-PlanItem = PlannedWrite | PlannedSkip | PlannedUnmanaged | PlannedCopyDir
+@dataclass(frozen=True)
+class PlannedEnsureExists:
+    target: Path
+    content: str
+    reason: str
+    mode: int | None = None
+
+
+PlanItem = PlannedWrite | PlannedSkip | PlannedUnmanaged | PlannedCopyDir | PlannedEnsureExists
 
 
 def _kit_root() -> Path:
@@ -175,6 +185,192 @@ def _template_kind_for_path(path: Path) -> str:
     if ext in {".sh", ".py", ".toml", ".json", ".dockerfile"}:
         return "raw"
     return "text"
+
+
+def _managed_shell_header(template: str) -> str:
+    return f"# {MANAGED_MARKER} (kit-version: {__version__}) (template: {template})\n"
+
+
+def _inject_managed_into_shell_script(body: str, template: str) -> str:
+    lines = body.splitlines(keepends=True)
+    header = _managed_shell_header(template)
+    if not lines:
+        return header
+    if lines[0].startswith("#!"):
+        return lines[0] + header + "".join(lines[1:])
+    return header + body
+
+
+def _inject_managed_into_prompt_frontmatter(body: str, template: str) -> str:
+    """Insert managed markers as YAML comments inside existing frontmatter.
+
+    Prompt files for agent slash-commands typically must start with `---`. We avoid
+    prepending anything before frontmatter and instead inject comments after the
+    opening fence.
+    """
+
+    lines = body.splitlines(keepends=False)
+    if not lines:
+        return body
+    if lines[0].strip() != "---":
+        return body
+    injected = [
+        lines[0],
+        f"# {MANAGED_MARKER}",
+        f"# kit-version: {__version__}",
+        f"# template: {template}",
+        *lines[1:],
+    ]
+    out = "\n".join(injected)
+    return out + ("\n" if body.endswith("\n") else "")
+
+
+def _parse_speckit_agents(raw: str) -> list[str]:
+    raw = (raw or "").strip()
+    if not raw:
+        return ["codex"]
+    parts = [p for p in re.split(r"[,\s]+", raw) if p]
+    if parts == ["all"]:
+        return ["codex", "claude"]
+    return parts
+
+
+def _plan_speckit_installer(*, project_root: Path, kit_root: Path, cfg: SddKitConfig) -> list[PlanItem]:
+    if not cfg.manage_speckit:
+        return []
+
+    upstream = ensure_speckit_upstream(kit_root)
+    plan: list[PlanItem] = []
+
+    # .specify/templates/*
+    for src in list_template_files(upstream):
+        rel = src.relative_to(upstream.root / "templates")
+        target = project_root / ".specify" / "templates" / rel
+        body = src.read_text(encoding="utf-8", errors="replace")
+        content = managed_header("markdown", f"speckit/templates/{rel.as_posix()}") + body
+        if target.exists() and cfg.safe_mode and not is_managed_file(target):
+            plan.append(PlannedUnmanaged(target=target, reason="exists but is not managed (safe_mode)"))
+            continue
+        reason = "create" if not target.exists() else ("update (managed)" if is_managed_file(target) else "update")
+        plan.append(PlannedWrite(target=target, content=content, reason=reason))
+
+    # .specify/scripts/{bash|powershell}/*
+    scripts_subdir = "bash" if cfg.speckit_script_variant == "sh" else "powershell"
+    for src in list_script_files(upstream, cfg.speckit_script_variant):
+        rel = src.relative_to(upstream.root / "scripts" / scripts_subdir)
+        target = project_root / ".specify" / "scripts" / scripts_subdir / rel
+        body = src.read_text(encoding="utf-8", errors="replace")
+        content = _inject_managed_into_shell_script(body, f"speckit/scripts/{scripts_subdir}/{rel.as_posix()}")
+        mode = 0o755 if (cfg.speckit_script_variant == "sh" and target.suffix == ".sh") else None
+        if target.exists() and cfg.safe_mode and not is_managed_file(target):
+            plan.append(PlannedUnmanaged(target=target, reason="exists but is not managed (safe_mode)"))
+            continue
+        reason = "create" if not target.exists() else ("update (managed)" if is_managed_file(target) else "update")
+        plan.append(PlannedWrite(target=target, content=content, reason=reason, mode=mode))
+
+    # Ensure constitution exists, but never enforce its content (users can customize it).
+    const_src = upstream.root / "templates" / "constitution-template.md"
+    const_body = const_src.read_text(encoding="utf-8", errors="replace") if const_src.exists() else ""
+    plan.append(
+        PlannedEnsureExists(
+            target=project_root / ".specify" / "memory" / "constitution.md",
+            content=const_body,
+            reason="ensure exists from .specify/templates/constitution-template.md",
+        )
+    )
+
+    # License/attribution notice for vendored Spec Kit content installed into the project.
+    lic_src = upstream.root / "LICENSE"
+    lic_text = lic_src.read_text(encoding="utf-8", errors="replace") if lic_src.exists() else ""
+    notice_body = (
+        "# Third-Party Notices\n\n"
+        "This project includes Spec Kit-derived templates and scripts installed by sdd-workflow-kit.\n\n"
+        "## GitHub Spec Kit\n\n"
+        f"- Project: `github/spec-kit`\n"
+        f"- Source: https://github.com/github/spec-kit\n"
+        f"- Upstream pin: `{upstream.version_label}`\n"
+        "- License: MIT\n\n"
+        "### MIT License\n\n"
+        "```text\n"
+        + lic_text.rstrip()
+        + "\n```\n"
+    )
+    notice_path = project_root / ".specify" / "THIRD_PARTY_NOTICES.md"
+    notice_content = managed_header("markdown", "speckit/THIRD_PARTY_NOTICES.md") + notice_body
+    if notice_path.exists() and cfg.safe_mode and not is_managed_file(notice_path):
+        plan.append(PlannedUnmanaged(target=notice_path, reason="exists but is not managed (safe_mode)"))
+    else:
+        reason = "create" if not notice_path.exists() else ("update (managed)" if is_managed_file(notice_path) else "update")
+        plan.append(PlannedWrite(target=notice_path, content=notice_content, reason=reason))
+
+    # Agent prompts: generate speckit.* markdown prompts (Codex and/or Claude).
+    agents = _parse_speckit_agents(cfg.speckit_agent)
+    for agent in agents:
+        if agent not in {"codex", "claude"}:
+            raise ValueError(f"Unsupported speckit.agent: {agent} (supported: codex, claude, all)")
+        if agent == "codex":
+            out_dir = project_root / cfg.codex_root / "prompts"
+        else:
+            out_dir = project_root / ".claude" / "commands"
+
+        for src in list_command_templates(upstream):
+            name = src.stem
+            template_text = src.read_text(encoding="utf-8", errors="replace")
+            prompt = generate_command_prompt(
+                template_text,
+                script_variant=cfg.speckit_script_variant,
+                agent=agent,
+                args_format="$ARGUMENTS",
+            )
+            prompt = _inject_managed_into_prompt_frontmatter(prompt, f"speckit/commands/{name}.md")
+            target = out_dir / f"speckit.{name}.md"
+            if target.exists() and cfg.safe_mode and not is_managed_file(target):
+                plan.append(PlannedUnmanaged(target=target, reason="exists but is not managed (safe_mode)"))
+                continue
+            reason = "create" if not target.exists() else ("update (managed)" if is_managed_file(target) else "update")
+            plan.append(PlannedWrite(target=target, content=prompt, reason=reason))
+
+    # Overlay fragment for AGENTS.md manual additions. This fragment is treated as user-editable;
+    # we only ensure it exists so the workflow has a stable source of truth.
+    default_overlay = (
+        "# Local additions for AGENTS.md\n"
+        "\n"
+        "- This block is maintained by `sdd-kit sync` (Spec Kit mode).\n"
+        "- Edit this file to add repo-specific notes for your team.\n"
+    )
+    plan.append(
+        PlannedEnsureExists(
+            target=project_root / ".sddkit" / "fragments" / "AGENTS.manual.md",
+            content=default_overlay,
+            reason="ensure AGENTS.md overlay fragment exists",
+        )
+    )
+
+    return plan
+
+
+_AGENTS_MANUAL_START = "<!-- MANUAL ADDITIONS START -->"
+_AGENTS_MANUAL_END = "<!-- MANUAL ADDITIONS END -->"
+
+
+def _normalize_newlines(text: str) -> str:
+    return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _upsert_agents_manual_block(agents_md: str, manual_fragment: str) -> str:
+    agents_md = _normalize_newlines(agents_md)
+    manual_fragment = _normalize_newlines(manual_fragment).rstrip("\n")
+    block = f"{_AGENTS_MANUAL_START}\n{manual_fragment}\n{_AGENTS_MANUAL_END}"
+
+    if _AGENTS_MANUAL_START in agents_md and _AGENTS_MANUAL_END in agents_md:
+        pattern = re.compile(rf"{re.escape(_AGENTS_MANUAL_START)}.*?{re.escape(_AGENTS_MANUAL_END)}", re.DOTALL)
+        out = pattern.sub(block, agents_md, count=1)
+        return out if out.endswith("\n") else out + "\n"
+
+    # No markers: append a new manual block at the end.
+    base = agents_md.rstrip("\n")
+    out = base + ("\n\n" if base else "") + block + "\n"
+    return out
 
 
 def _plan_from_template_tree(
@@ -371,6 +567,9 @@ def _plan_writes(project_root: Path, kit_root: Path, cfg: SddKitConfig, detectio
             extra_data={},
         )
 
+    # Spec Kit (speckit) installer: `.specify/*` and `speckit.*` prompts.
+    plan += _plan_speckit_installer(project_root=project_root, kit_root=kit_root, cfg=cfg)
+
     return plan
 
 
@@ -408,6 +607,18 @@ def sync_project(
             item.target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copytree(item.source, item.target, dirs_exist_ok=False)
             continue
+        if isinstance(item, PlannedEnsureExists):
+            if item.target.exists():
+                print(f"SKIP {_project_rel(item.target, project_root)} (exists)")
+                continue
+            print(f"WRITE {_project_rel(item.target, project_root)} ({item.reason})")
+            if dry_run:
+                continue
+            item.target.parent.mkdir(parents=True, exist_ok=True)
+            item.target.write_text(item.content, encoding="utf-8")
+            if item.mode is not None:
+                os.chmod(item.target, item.mode)
+            continue
         print(f"WRITE {_project_rel(item.target, project_root)} ({item.reason})")
         if dry_run:
             continue
@@ -415,6 +626,20 @@ def sync_project(
         item.target.write_text(item.content, encoding="utf-8")
         if item.mode is not None:
             os.chmod(item.target, item.mode)
+
+    # In speckit mode, keep only the MANUAL block in AGENTS.md in sync with the overlay fragment.
+    # This avoids having two tools fighting over the full file.
+    if cfg.manage_speckit and not skills_install_only:
+        agents_path = project_root / "AGENTS.md"
+        frag_path = project_root / ".sddkit" / "fragments" / "AGENTS.manual.md"
+        if agents_path.exists() and frag_path.exists():
+            cur = agents_path.read_text(encoding="utf-8", errors="replace")
+            frag = frag_path.read_text(encoding="utf-8", errors="replace")
+            updated = _upsert_agents_manual_block(cur, frag)
+            if _normalize_newlines(cur) != updated:
+                print(f"PATCH {_project_rel(agents_path, project_root)} (manual block)")
+                if not dry_run:
+                    agents_path.write_text(updated, encoding="utf-8")
 
     if skills_install_only:
         return
@@ -444,6 +669,11 @@ def check_project(project_root: Path, *, config_path: Path, cfg: SddKitConfig, d
         if isinstance(item, PlannedSkip):
             # Skipped files are outside of management scope.
             continue
+        if isinstance(item, PlannedEnsureExists):
+            if not item.target.exists():
+                print(f"MISSING {_project_rel(item.target, project_root)}")
+                ok = False
+            continue
         if not item.target.exists():
             print(f"MISSING {_project_rel(item.target, project_root)}")
             ok = False
@@ -452,6 +682,18 @@ def check_project(project_root: Path, *, config_path: Path, cfg: SddKitConfig, d
         if actual != item.content:
             print(f"DRIFT {_project_rel(item.target, project_root)}")
             ok = False
+
+    # In speckit mode, only validate the AGENTS.md MANUAL block against the overlay fragment.
+    if cfg.manage_speckit:
+        agents_path = project_root / "AGENTS.md"
+        frag_path = project_root / ".sddkit" / "fragments" / "AGENTS.manual.md"
+        if agents_path.exists() and frag_path.exists():
+            cur = agents_path.read_text(encoding="utf-8", errors="replace")
+            frag = frag_path.read_text(encoding="utf-8", errors="replace")
+            expected = _upsert_agents_manual_block(cur, frag)
+            if _normalize_newlines(cur) != expected:
+                print(f"DRIFT {_project_rel(agents_path, project_root)} (manual block)")
+                ok = False
 
     return ok
 
