@@ -274,6 +274,7 @@ bash .specify/scripts/bash/update-agent-context.sh codex
 
 - `speckit.analyze`: read-only анализ согласованности `spec.md`/`plan.md`/`tasks.md` (не меняет файлы).
 - `speckit.checklist <тема>`: создаёт чеклист качества требований в `specs/001-.../checklists/*.md` (это не тесты кода).
+- `speckit.planreview`: мульти-модельное ревью `spec.md/plan.md/tasks.md` (advisory-only) и запись отчёта в `specs/001-.../reviews/planreview.md`. Обычно запускают после `speckit.plan` и до `speckit.tasks/implement`. Требует установленный `opencode` (и опционально другие инструменты).
 - `speckit.constitution`: заполнение/обновление `.specify/memory/constitution.md` (принципы). В гибридном режиме не редактируйте `.specify/templates/*` и `.codex/prompts/*` вручную: они managed.
 - `speckit.taskstoissues`: создаёт GitHub issues из задач (требуется GitHub remote и настроенный GitHub MCP в агенте).
 

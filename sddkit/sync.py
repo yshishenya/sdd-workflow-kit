@@ -364,6 +364,26 @@ def _plan_speckit_installer(*, project_root: Path, kit_root: Path, cfg: SddKitCo
             reason = "create" if not target.exists() else ("update (managed)" if is_managed_file(target) else "update")
             plan.append(PlannedWrite(target=target, content=prompt, reason=reason))
 
+        # Overlay commands (not part of upstream spec-kit). Kept separate so upstream updates stay clean.
+        overlay_tmpl = load_template("en", "speckit/commands/planreview.md.tmpl").text
+        overlay_body = render_template(
+            overlay_tmpl,
+            {
+                "specs_root": cfg.specs_root,
+            },
+        )
+        overlay_prompt = _inject_managed_into_prompt_frontmatter(overlay_body, "speckit/commands/planreview.md")
+        overlay_target = out_dir / "speckit.planreview.md"
+        if overlay_target.exists() and cfg.safe_mode and not is_managed_file(overlay_target):
+            plan.append(PlannedUnmanaged(target=overlay_target, reason="exists but is not managed (safe_mode)"))
+        else:
+            reason = (
+                "create"
+                if not overlay_target.exists()
+                else ("update (managed)" if is_managed_file(overlay_target) else "update")
+            )
+            plan.append(PlannedWrite(target=overlay_target, content=overlay_prompt, reason=reason))
+
     # Overlay fragment for AGENTS.md manual additions. This fragment is treated as user-editable;
     # we only ensure it exists so the workflow has a stable source of truth.
     default_overlay = (

@@ -274,6 +274,7 @@ Rules of thumb:
 
 - `speckit.analyze`: read-only cross-artifact consistency report (`spec.md`/`plan.md`/`tasks.md`).
 - `speckit.checklist <topic>`: creates a requirements-quality checklist under `specs/001-.../checklists/*.md` (not code tests).
+- `speckit.planreview`: multi-model review of `spec.md/plan.md/tasks.md` (advisory-only) and writes a report to `specs/001-.../reviews/planreview.md`. Typically run after `speckit.plan` and before `speckit.tasks/implement`. Requires `opencode` installed (and optionally other tools).
 - `speckit.constitution`: create/update `.specify/memory/constitution.md`. In this hybrid mode, do not manually edit `.specify/templates/*` or `.codex/prompts/*` (managed by `sdd-kit`).
 - `speckit.taskstoissues`: turns tasks into GitHub issues (requires a GitHub remote + GitHub MCP configured for the agent).
 

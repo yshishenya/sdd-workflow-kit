@@ -1,0 +1,105 @@
+---
+description: Multi-model review of the current feature spec/plan/tasks (advisory-only).
+---
+
+## User Input
+
+```text
+$ARGUMENTS
+```
+
+## Goal
+
+Produce a multi-perspective review of the current feature's:
+
+- `{{specs_root}}/NNN-.../spec.md`
+- `{{specs_root}}/NNN-.../plan.md` (if present)
+- `{{specs_root}}/NNN-.../tasks.md` (if present)
+
+This command is **advisory-only**:
+
+- DO write a review report file.
+- DO NOT edit `spec.md` / `plan.md` / `tasks.md` unless the user explicitly asks.
+
+## How To Run (Agent)
+
+- `/speckit.planreview` (no args)
+- Optional focus areas: `/speckit.planreview security, rollout, testing gaps`
+
+## Steps
+
+### 1) Locate the feature directory
+
+Preferred:
+
+1. Read current git branch name (expected: `NNN-short-name`).
+2. Use `<FEATURE_DIR> = {{specs_root}}/<branch-name>/`.
+
+If branch doesn't match, ask the user for `<FEATURE_DIR>` under `{{specs_root}}/`.
+
+### 2) Load artifacts
+
+Read:
+
+- `<FEATURE_DIR>/spec.md`
+- `<FEATURE_DIR>/plan.md` (if present)
+- `<FEATURE_DIR>/tasks.md` (if present)
+
+If only `spec.md` exists, still run the review and focus on missing info / clarifications.
+
+### 3) Review as this agent (primary)
+
+Provide findings grouped by:
+
+- Missing Information
+- Design Concerns
+- Risk Flags (security, data loss, migrations, performance, compliance)
+- Feasibility Questions (estimates, dependencies, access, sequencing)
+- Verification Gaps (tests, monitoring, rollback, QA)
+- Enhancement Suggestions
+
+### 4) Review with at least 1 additional model (secondary), if available
+
+Preferred 2nd opinion tool: OpenCode (`opencode`).
+
+First check if it's installed:
+
+```bash
+command -v opencode
+```
+
+If available, run it from repo root. Attach only the files that exist.
+
+Example (spec + plan + tasks):
+
+```bash
+opencode run --format json --dir . \
+  -f "<FEATURE_DIR>/spec.md" \
+  -f "<FEATURE_DIR>/plan.md" \
+  -f "<FEATURE_DIR>/tasks.md" \
+  "You are a senior engineer. Review the attached spec/plan/tasks. Output: (1) short summary, (2) categorized findings, (3) top 5 actionable fixes, (4) verification checklist."
+```
+
+If a tool fails (auth/missing/timeout), record that and continue.
+
+### 5) Write the review report
+
+Write (or overwrite) the report:
+
+- `<FEATURE_DIR>/reviews/planreview.md`
+
+Include:
+
+- timestamp
+- tools used (which ones succeeded/failed)
+- consolidated prioritized action list (P0/P1/P2)
+- categorized findings
+- appendices: raw secondary model output (verbatim, fenced)
+
+### 6) Stop and report
+
+Return:
+
+- feature dir path
+- report path
+- top recommended edits to `spec.md` / `plan.md` / `tasks.md` (do not apply)

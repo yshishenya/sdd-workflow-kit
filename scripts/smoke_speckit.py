@@ -83,6 +83,7 @@ def main() -> int:
             repo / ".specify" / "scripts" / "bash" / "create-new-feature.sh",
             repo / ".codex" / "prompts" / "speckit.specify.md",
             repo / ".codex" / "prompts" / "speckit.plan.md",
+            repo / ".codex" / "prompts" / "speckit.planreview.md",
             repo / ".codex" / "prompts" / "speckit.tasks.md",
             repo / ".codex" / "prompts" / "speckit.implement.md",
         ]
