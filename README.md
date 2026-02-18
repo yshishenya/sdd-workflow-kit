@@ -275,6 +275,8 @@ python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --to gl
 
 Есть два подхода.
 
+Примечание для Spec Kit режима: если у вас `manage.speckit=true`, используйте подход A (запуск CLI из submodule в проекте). Composite action (подход B) не включает nested submodules и не предназначен для установки upstream-источников.
+
 ### Подход A: коммитить сгенерированный workflow в проект
 
 Kit может создать `.github/workflows/sdd-kit-check.yml` (если включено `github_workflow = true`).
@@ -309,6 +311,7 @@ jobs:
 Best practice:
 
 - Пинить action на тег или SHA, а не на `main`, чтобы сборки были воспроизводимыми.
+- Этот подход не предназначен для `manage.speckit=true` (используйте подход A).
 
 ---
 
