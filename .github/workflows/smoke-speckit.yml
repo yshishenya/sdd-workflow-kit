@@ -1,0 +1,22 @@
+name: smoke-speckit
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Python syntax check
+        run: python -m py_compile sddkit/*.py
+      - name: Spec Kit hybrid smoke
+        run: python scripts/smoke_speckit.py
+
