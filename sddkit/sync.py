@@ -65,6 +65,27 @@ def _project_rel(p: Path, root: Path) -> str:
         return str(p)
 
 
+def _assert_no_duplicate_plan_targets(plan: list[PlanItem], *, project_root: Path) -> None:
+    """Guard against accidental duplicate plan entries.
+
+    If two items target the same path, the second one would overwrite/compete
+    with the first, and behavior becomes order-dependent and hard to reason about.
+    """
+
+    seen: dict[Path, PlanItem] = {}
+    for item in plan:
+        if isinstance(item, PlannedSkip):
+            continue
+        other = seen.get(item.target)
+        if other is not None:
+            raise RuntimeError(
+                "Internal error: duplicate plan target "
+                f"{_project_rel(item.target, project_root)} "
+                f"({type(other).__name__} vs {type(item).__name__})"
+            )
+        seen[item.target] = item
+
+
 def _infer_commands(detection: dict[str, str]) -> dict[str, str]:
     langs = set((detection.get("languages") or "").split(","))
     pms = set((detection.get("package_managers") or "").split(","))
@@ -593,6 +614,8 @@ def sync_project(
     if skills_install_pack is not None:
         plan += _plan_skill_install(project_root, kit_root, pack=skills_install_pack, dest=skills_install_to or cfg.skills_default_install_to)
 
+    _assert_no_duplicate_plan_targets(plan, project_root=project_root)
+
     for item in plan:
         if isinstance(item, PlannedSkip):
             print(f"SKIP {_project_rel(item.target, project_root)} ({item.reason})")
@@ -659,6 +682,8 @@ def _ensure_config_notice(project_root: Path, config_path: Path) -> None:
 def check_project(project_root: Path, *, config_path: Path, cfg: SddKitConfig, detection: dict[str, str], locale: str) -> bool:
     kit_root = _kit_root()
     plan = _plan_writes(project_root, kit_root, cfg, detection, locale)
+
+    _assert_no_duplicate_plan_targets(plan, project_root=project_root)
 
     ok = True
     for item in plan:

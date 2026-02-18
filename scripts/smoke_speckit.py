@@ -110,6 +110,27 @@ def main() -> int:
         if not impl_plan.exists():
             raise RuntimeError(f"Plan setup failed: {impl_plan}")
 
+        # Generate/update AGENTS.md via Spec Kit script, then verify our overlay manual block survives updates.
+        run(["bash", str(repo / ".specify" / "scripts" / "bash" / "update-agent-context.sh"), "codex"], cwd=repo)
+
+        sentinel = "SMOKE-SPECKIT-MANUAL-BLOCK"
+        overlay_path = repo / ".sddkit" / "fragments" / "AGENTS.manual.md"
+        overlay_path.write_text(
+            "# Local additions for AGENTS.md\n\n- "
+            + sentinel
+            + "\n",
+            encoding="utf-8",
+        )
+        run([sys.executable, str(project_cli), "sync", "--project", "."], cwd=repo)
+        agents_text = (repo / "AGENTS.md").read_text(encoding="utf-8", errors="replace")
+        if sentinel not in agents_text:
+            raise RuntimeError("AGENTS.md manual block overlay was not applied (sentinel missing)")
+
+        run(["bash", str(repo / ".specify" / "scripts" / "bash" / "update-agent-context.sh"), "codex"], cwd=repo)
+        agents_text2 = (repo / "AGENTS.md").read_text(encoding="utf-8", errors="replace")
+        if sentinel not in agents_text2:
+            raise RuntimeError("AGENTS.md manual block was not preserved after update-agent-context (sentinel missing)")
+
         out = run_capture(
             ["bash", str(repo / ".specify" / "scripts" / "bash" / "check-prerequisites.sh"), "--json"],
             cwd=repo,
@@ -136,4 +157,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

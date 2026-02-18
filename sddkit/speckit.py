@@ -172,8 +172,9 @@ def _extract_variant_value(frontmatter_lines: list[str], *, key: str, variant: s
             if line.strip() == f"{key}:":
                 in_section = True
             continue
-        # End section when a new top-level key starts.
-        if line and not line[0].isspace():
+        # End section when a new top-level key starts (match upstream packaging script behavior).
+        # Keep scanning through blank/comment lines without prematurely stopping.
+        if re.match(r"^[A-Za-z].*:", line):
             break
         m = re.match(rf"^\s*{re.escape(variant)}\s*:\s*(.*)$", line)
         if m:
@@ -206,10 +207,15 @@ def _strip_frontmatter_sections(text: str, *, sections: set[str]) -> str:
             # Skip indented continuation lines of the removed section.
             if line.startswith((" ", "\t")):
                 continue
-            skipping = False
-            # Fall through to normal processing of the current line.
+            # End skipping when a new top-level YAML key starts (same condition used upstream).
+            if re.match(r"^[A-Za-z].*:", line):
+                skipping = False
+                out_fm.append(line)
+                continue
+            # Preserve blank/comment lines without terminating the skip state.
+            out_fm.append(line)
+            continue
         out_fm.append(line)
 
     out_lines = ["---", *out_fm, "---", *lines[end + 1 :]]
     return "\n".join(out_lines) + ("\n" if text.endswith("\n") else "")
-
