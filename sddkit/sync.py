@@ -259,6 +259,72 @@ def _inject_managed_into_prompt_frontmatter(body: str, template: str) -> str:
     return out + ("\n" if body.endswith("\n") else "")
 
 
+def _yaml_escape_scalar(value: str) -> str:
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
+def _strip_speckit_command_references(body: str) -> str:
+    """Rewrite legacy Spec Kit references to skill invocations."""
+    body = re.sub(
+        r"/speckit\.([A-Za-z0-9_-]+)",
+        lambda m: f"$speckit-{m.group(1)}",
+        body,
+    )
+    body = re.sub(
+        r"/prompts:speckit\.([A-Za-z0-9_-]+)",
+        lambda m: f"$speckit-{m.group(1)}",
+        body,
+    )
+    return body
+
+
+def _split_frontmatter_and_body(text: str) -> tuple[dict[str, str], str]:
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return {}, text
+
+    end = None
+    for i in range(1, len(lines)):
+        if lines[i].strip() == "---":
+            end = i
+            break
+    if end is None:
+        return {}, text
+
+    data: dict[str, str] = {}
+    for line in lines[1:end]:
+        if ":" not in line:
+            continue
+        k, _, v = line.partition(":")
+        data[k.strip()] = v.strip()
+
+    body = "\n".join(lines[end + 1 :]).lstrip("\n")
+    return data, body
+
+
+def _render_speckit_skill(skill_name: str, prompt_body: str, template: str) -> str:
+    prompt_body = _strip_speckit_command_references(prompt_body)
+    prompt_body = prompt_body.replace("$ARGUMENTS", "the user request")
+    fm, body = _split_frontmatter_and_body(prompt_body)
+    description = fm.get("description", "").strip().strip('"').strip("'")
+    if not description:
+        description = "Spec Kit command wrapper"
+
+    content = (
+        "---\n"
+        f"name: {skill_name}\n"
+        f"description: {_yaml_escape_scalar(description)}\n"
+        "metadata:\n"
+        f'  short-description: {_yaml_escape_scalar(description)}\n'
+        "---\n\n"
+        + body
+    )
+    if content.endswith("\n") is False and prompt_body.endswith("\n") is True:
+        content += "\n"
+    return _inject_managed_into_prompt_frontmatter(content, template)
+
+
 def _parse_speckit_agents(raw: str) -> list[str]:
     raw = (raw or "").strip()
     if not raw:
@@ -337,13 +403,13 @@ def _plan_speckit_installer(*, project_root: Path, kit_root: Path, cfg: SddKitCo
         reason = "create" if not notice_path.exists() else ("update (managed)" if is_managed_file(notice_path) else "update")
         plan.append(PlannedWrite(target=notice_path, content=notice_content, reason=reason))
 
-    # Agent prompts: generate speckit.* markdown prompts (Codex and/or Claude).
+    # Agent prompts/skills: generate speckit.* commands (Codex skills or Claude command files).
     agents = _parse_speckit_agents(cfg.speckit_agent)
     for agent in agents:
         if agent not in {"codex", "claude"}:
             raise ValueError(f"Unsupported speckit.agent: {agent} (supported: codex, claude, all)")
         if agent == "codex":
-            out_dir = project_root / cfg.codex_root / "prompts"
+            out_root = project_root / cfg.codex_root / "skills"
         else:
             out_dir = project_root / ".claude" / "commands"
 
@@ -356,8 +422,16 @@ def _plan_speckit_installer(*, project_root: Path, kit_root: Path, cfg: SddKitCo
                 agent=agent,
                 args_format="$ARGUMENTS",
             )
-            prompt = _inject_managed_into_prompt_frontmatter(prompt, f"speckit/commands/{name}.md")
-            target = out_dir / f"speckit.{name}.md"
+            if agent == "codex":
+                prompt = _render_speckit_skill(
+                    skill_name=f"speckit-{name}",
+                    prompt_body=prompt,
+                    template=f"speckit/commands/{name}.md",
+                )
+                target = out_root / f"speckit-{name}" / "SKILL.md"
+            else:
+                prompt = _inject_managed_into_prompt_frontmatter(prompt, f"speckit/commands/{name}.md")
+                target = out_dir / f"speckit.{name}.md"
             if target.exists() and cfg.safe_mode and not is_managed_file(target):
                 plan.append(PlannedUnmanaged(target=target, reason="exists but is not managed (safe_mode)"))
                 continue
@@ -372,8 +446,18 @@ def _plan_speckit_installer(*, project_root: Path, kit_root: Path, cfg: SddKitCo
                 "specs_root": cfg.specs_root,
             },
         )
-        overlay_prompt = _inject_managed_into_prompt_frontmatter(overlay_body, "speckit/commands/planreview.md")
-        overlay_target = out_dir / "speckit.planreview.md"
+        if agent == "codex":
+            overlay_body = _strip_speckit_command_references(overlay_body)
+            overlay_body = overlay_body.replace("$ARGUMENTS", "the user request")
+            overlay_prompt = _render_speckit_skill(
+                skill_name="speckit-planreview",
+                prompt_body=overlay_body,
+                template="speckit/commands/planreview.md",
+            )
+            overlay_target = out_root / "speckit-planreview" / "SKILL.md"
+        else:
+            overlay_prompt = _inject_managed_into_prompt_frontmatter(overlay_body, "speckit/commands/planreview.md")
+            overlay_target = out_dir / "speckit.planreview.md"
         if overlay_target.exists() and cfg.safe_mode and not is_managed_file(overlay_target):
             plan.append(PlannedUnmanaged(target=overlay_target, reason="exists but is not managed (safe_mode)"))
         else:

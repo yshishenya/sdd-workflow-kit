@@ -77,7 +77,17 @@ def main() -> int:
         run([sys.executable, str(project_cli), "sync", "--project", "."], cwd=repo)
 
         # Validate installed files exist.
-        required = [
+        required_skills = [
+            repo / ".specify" / "templates" / "spec-template.md",
+            repo / ".specify" / "templates" / "plan-template.md",
+            repo / ".specify" / "scripts" / "bash" / "create-new-feature.sh",
+            repo / ".codex" / "skills" / "speckit-specify" / "SKILL.md",
+            repo / ".codex" / "skills" / "speckit-plan" / "SKILL.md",
+            repo / ".codex" / "skills" / "speckit-tasks" / "SKILL.md",
+            repo / ".codex" / "skills" / "speckit-implement" / "SKILL.md",
+            repo / ".codex" / "skills" / "speckit-planreview" / "SKILL.md",
+        ]
+        required_prompts = [
             repo / ".specify" / "templates" / "spec-template.md",
             repo / ".specify" / "templates" / "plan-template.md",
             repo / ".specify" / "scripts" / "bash" / "create-new-feature.sh",
@@ -87,6 +97,13 @@ def main() -> int:
             repo / ".codex" / "prompts" / "speckit.tasks.md",
             repo / ".codex" / "prompts" / "speckit.implement.md",
         ]
+
+        required = required_skills
+        if (repo / ".codex" / "skills").exists():
+            required = required_skills
+        elif (repo / ".codex" / "prompts").exists():
+            required = required_prompts
+
         missing = [p for p in required if not p.exists()]
         if missing:
             raise RuntimeError("Missing expected files:\n" + "\n".join(str(p) for p in missing))

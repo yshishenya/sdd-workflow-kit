@@ -36,7 +36,7 @@ CLI безопасно и идемпотентно синхронизирует 
 Отдельно поддерживается режим **Spec Kit** (GitHub `spec-kit`) как каноничный SDD пайплайн. В этом режиме `sdd-kit`:
 
 - ставит `.specify/*` (скрипты/шаблоны Spec Kit) из pinned upstream
-- генерирует команды агента `speckit.*` (например, для Codex: `.codex/prompts/speckit.plan.md`)
+- генерирует команды `speckit-*` как Codex skills (например, `.codex/skills/speckit-plan/SKILL.md`)
 - проверяет дрейф инфраструктуры (а не ваших фичевых артефактов)
 
 ## Зачем
@@ -65,12 +65,12 @@ CLI безопасно и идемпотентно синхронизирует 
 flowchart LR
   KIT["sdd-workflow-kit (git submodule)"] --> SYNC["sdd-kit sync"]
   SYNC --> SPECIFY[".specify/* (Spec Kit scripts + templates)"]
-  SYNC --> PROMPTS[".codex/prompts/speckit.*.md"]
+  SYNC --> PROMPTS[".codex/skills/speckit-command-name/SKILL.md"]
   SYNC --> FRAG[".sddkit/fragments/AGENTS.manual.md"]
 
-  DEV["Developer / agent"] --> SPK["speckit.specify/plan/tasks/implement"]
+  DEV["Developer / agent"] --> SPK["$speckit-specify, $speckit-plan, $speckit-tasks, $speckit-implement"]
   SPK --> SPECIFY
-  SPK --> SPECS["specs/###-feature/{spec,plan,tasks}.md"]
+  SPK --> SPECS["specs/###-feature/spec.md, plan.md, tasks.md"]
 
   SPECIFY --> AG["AGENTS.md (Spec Kit updater)"]
   FRAG --> AG
@@ -141,7 +141,7 @@ git submodule update --init --recursive
 
 ### 1) SDD цикл (Spec Kit)
 
-Команды `speckit.*` — это агентские команды (prompts), которые ведут вас по одному каноничному циклу:
+Команды `speckit-*` — это команды-скрипты (Codex skills), которые ведут вас по одному каноничному циклу:
 `spec.md -> plan.md -> tasks.md -> implement`.
 
 Артефакты фичи лежат в `specs/###-feature-name/`.
@@ -150,27 +150,27 @@ git submodule update --init --recursive
 
 ```mermaid
 flowchart TD
-  START["Start"] --> SPECIFY["speckit.specify"]
+  START["Start"] --> SPECIFY["$speckit-specify"]
   SPECIFY --> SPEC["specs/###-.../spec.md"]
 
   SPEC --> AMBIG{"Ambiguity?"}
-  AMBIG -->|yes| CLARIFY["speckit.clarify"] --> SPEC
+  AMBIG -->|yes| CLARIFY["$speckit-clarify"] --> SPEC
 
-  AMBIG -->|no| PLAN["speckit.plan"]
+  AMBIG -->|no| PLAN["$speckit-plan"]
   PLAN --> PLAN_OUT["plan.md + artifacts + AGENTS.md"]
-  PLAN_OUT --> TASKS["speckit.tasks"]
+  PLAN_OUT --> TASKS["$speckit-tasks"]
   TASKS --> TASKS_MD["tasks.md"]
 
   TASKS_MD --> ANALYZE_OK{"Need analysis?"}
-  ANALYZE_OK -->|yes| ANALYZE["speckit.analyze (read-only)"] --> TASKS_MD
-  ANALYZE_OK -->|no| IMPLEMENT["speckit.implement"]
+  ANALYZE_OK -->|yes| ANALYZE["$speckit-analyze (read-only)"] --> TASKS_MD
+  ANALYZE_OK -->|no| IMPLEMENT["$speckit-implement"]
   IMPLEMENT --> CODE["Code + tests"]
 
   CODE --> DRIFT["sdd-kit check (drift gate)"]
   DRIFT --> PR["PR"]
 ```
 
-#### `speckit.specify <описание>`
+#### `$speckit-specify <описание>`
 
 Зачем: стартовать новую фичу и получить качественный `spec.md` (что/зачем), без реализации.
 
@@ -192,7 +192,7 @@ flowchart TD
 bash .specify/scripts/bash/create-new-feature.sh "Add ..."
 ```
 
-#### `speckit.plan`
+#### `$speckit-plan`
 
 Зачем: превратить `spec.md` в технический план и дизайн-артефакты.
 
@@ -205,7 +205,7 @@ bash .specify/scripts/bash/create-new-feature.sh "Add ..."
 Как использовать:
 
 - запускать на feature-ветке (`001-...`) после готового `spec.md`
-- если в требованиях есть неоднозначности — сначала `speckit.clarify`
+- если в требованиях есть неоднозначности — сначала `$speckit-clarify`
 
 Скрипты без агента:
 
@@ -214,7 +214,7 @@ bash .specify/scripts/bash/setup-plan.sh
 bash .specify/scripts/bash/update-agent-context.sh codex
 ```
 
-#### `speckit.tasks`
+#### `$speckit-tasks`
 
 Зачем: получить исполнимый `tasks.md` (задачи с зависимостями и путями к файлам).
 
@@ -225,10 +225,10 @@ bash .specify/scripts/bash/update-agent-context.sh codex
 
 Как использовать:
 
-- запускать после `speckit.plan`
+- запускать после `$speckit-plan`
 - если поменяли `plan.md` — перегенерировать `tasks.md` (это ожидаемо)
 
-#### `speckit.implement`
+#### `$speckit-implement`
 
 Зачем: выполнить `tasks.md` по шагам, не теряя связь со спеком/планом.
 
@@ -243,14 +243,14 @@ bash .specify/scripts/bash/update-agent-context.sh codex
 - делать по 1 задаче за раз, часто запускать реальные проверки (тесты/линт/сборка)
 - перед PR прогонять `sdd-kit check`
 
-#### Дополнительные команды `speckit.*` (по ситуации)
+#### Дополнительные команды `speckit-*` (по ситуации)
 
-- `speckit.clarify`: если в `spec.md` есть неоднозначности; задаёт вопросы и дописывает ответы в `spec.md`.
-- `speckit.checklist`: создаёт чеклист качества требований в `specs/.../checklists/*.md` (это не тесты кода, это "unit tests" для спека).
-- `speckit.planreview`: мульти-модельное ревью `spec.md/plan.md/tasks.md` (advisory-only) и запись отчёта в `specs/.../reviews/planreview.md`. Рекомендуется после `speckit.plan` и до `speckit.tasks/implement`. Требует установленный `opencode` (и опционально другие инструменты).
-- `speckit.analyze`: read-only анализ согласованности `spec.md`/`plan.md`/`tasks.md` (полезно перед implement).
-- `speckit.constitution`: создаёт/обновляет `.specify/memory/constitution.md` (принципы). В гибридном режиме не редактируйте `.specify/templates/*` и `.codex/prompts/*` вручную: они managed и пинятся kit'ом.
-- `speckit.taskstoissues`: превращает задачи в GitHub issues (требует GitHub remote и настроенный GitHub MCP у агента).
+- `$speckit-clarify`: если в `spec.md` есть неоднозначности; задаёт вопросы и дописывает ответы в `spec.md`.
+- `$speckit-checklist`: создаёт чеклист качества требований в `specs/.../checklists/*.md` (это не тесты кода, это "unit tests" для спека).
+- `$speckit-planreview`: мульти-модельное ревью `spec.md/plan.md/tasks.md` (advisory-only) и запись отчёта в `specs/.../reviews/planreview.md`. Рекомендуется после `$speckit-plan` и до `$speckit-tasks`/`$speckit-implement`. Требует установленный `opencode` (и опционально другие инструменты).
+- `$speckit-analyze`: read-only анализ согласованности `spec.md`/`plan.md`/`tasks.md` (полезно перед implement).
+- `$speckit-constitution`: создаёт/обновляет `.specify/memory/constitution.md` (принципы). В гибридном режиме не редактируйте `.specify/templates/*` и `.codex/skills/*` вручную: они managed и пинятся kit'ом.
+- `$speckit-taskstoissues`: превращает задачи в GitHub issues (требует GitHub remote и настроенный GitHub MCP у агента).
 
 
 ### 2) Перед PR
@@ -269,7 +269,7 @@ python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
 
 `AGENTS.md` — это файл контекста/правил для агента: карта репозитория, команды, ограничения, договоренности по стилю/процессу.
 
-В **Spec Kit mode** `AGENTS.md` создаёт/обновляет сам Spec Kit скриптом `update-agent-context` (обычно это происходит на шаге `speckit.plan`).
+В **Spec Kit mode** `AGENTS.md` создаёт/обновляет сам Spec Kit скриптом `update-agent-context` (обычно это происходит на шаге `$speckit-plan`).
 
 Правила:
 
@@ -462,7 +462,7 @@ python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --to pr
 
 ### Spec Kit ругается на ветку
 
-Spec Kit ожидает ветки вида `001-feature-name`. Создавайте фичи через `speckit.specify`.
+Spec Kit ожидает ветки вида `001-feature-name`. Создавайте фичи через `$speckit-specify`.
 
 ## Требования
 

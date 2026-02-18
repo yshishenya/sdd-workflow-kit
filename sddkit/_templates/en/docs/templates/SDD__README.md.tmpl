@@ -11,10 +11,10 @@ This repository uses Spec-Driven Development (SDD) in a hybrid mode:
 
 ### For developers (daily loop)
 
-1. Create a feature: `speckit.specify` (or `.specify/scripts/.../create-new-feature.*`)
-2. Plan: `speckit.plan`
-3. Tasks: `speckit.tasks`
-4. Implement: `speckit.implement`
+1. Create a feature: `$speckit-specify` (or `.specify/scripts/.../create-new-feature.*`)
+2. Plan: `$speckit-plan`
+3. Tasks: `$speckit-tasks`
+4. Implement: `$speckit-implement`
 5. Before PR: `python3 .tooling/sdd-workflow-kit/bin/sdd-kit check --project .`
 
 ### For repo admins (setup + updates)
@@ -39,12 +39,12 @@ We intentionally do not “own the whole repo”. Only selected managed files ar
 flowchart LR
   KIT["sdd-workflow-kit (git submodule)"] --> SYNC["sdd-kit sync"]
   SYNC --> SPECIFY[".specify/* (Spec Kit scripts + templates)"]
-  SYNC --> PROMPTS[".codex/prompts/speckit.*.md"]
+  SYNC --> PROMPTS[".codex/skills/speckit-command-name/SKILL.md"]
   SYNC --> FRAG[".sddkit/fragments/AGENTS.manual.md"]
 
-  DEV["Developer / agent"] --> SPK["speckit.specify/plan/tasks/implement"]
+  DEV["Developer / agent"] --> SPK["$speckit-specify, $speckit-plan, $speckit-tasks, $speckit-implement"]
   SPK --> SPECIFY
-  SPK --> SPECS["specs/###-feature/{spec,plan,tasks}.md"]
+  SPK --> SPECS["specs/###-feature/spec.md, plan.md, tasks.md"]
 
   SPECIFY --> AG["AGENTS.md (Spec Kit updater)"]
   FRAG --> AG
@@ -71,11 +71,11 @@ flowchart LR
     constitution.md            # created if missing; user-editable
   THIRD_PARTY_NOTICES.md       # managed: upstream Spec Kit attribution
 
-.codex/prompts/                # managed: Codex commands (speckit.*)
-  speckit.specify.md
-  speckit.plan.md
-  speckit.tasks.md
-  speckit.implement.md
+.codex/skills/                # managed: Codex commands ($speckit-*)
+  speckit-specify/SKILL.md
+  speckit-plan/SKILL.md
+  speckit-tasks/SKILL.md
+  speckit-implement/SKILL.md
 
 specs/                         # NOT managed: per-feature artifacts (created by Spec Kit)
   001-feature-name/
@@ -88,7 +88,7 @@ specs/                         # NOT managed: per-feature artifacts (created by 
 
 - `.specify/templates/*`: managed by `sdd-kit` (copied from pinned Spec Kit). Drift-checked.
 - `.specify/scripts/*`: managed by `sdd-kit`. Drift-checked.
-- `.codex/prompts/speckit.*.md`: managed by `sdd-kit` (generated from pinned Spec Kit). Drift-checked.
+- `.codex/skills/speckit-command-name/SKILL.md`: managed by `sdd-kit` (generated from pinned Spec Kit). Drift-checked.
 - `.specify/memory/constitution.md`: yours. `sdd-kit` only creates it if missing.
 - `specs/**`: feature artifacts. Not drift-checked.
 - `AGENTS.md`: updated by Spec Kit (`update-agent-context.*`). `sdd-kit` only patches the MANUAL block.
@@ -97,7 +97,7 @@ specs/                         # NOT managed: per-feature artifacts (created by 
 
 `AGENTS.md` is the agent context file (commands, repo map, constraints).
 
-In Spec Kit mode, `sdd-kit` does not generate it end-to-end. It is created/updated by the Spec Kit script `update-agent-context` (usually during `speckit.plan`).
+In Spec Kit mode, `sdd-kit` does not generate it end-to-end. It is created/updated by the Spec Kit script `update-agent-context` (usually during `$speckit-plan`).
 
 To generate/update `AGENTS.md` manually (if needed):
 
@@ -133,20 +133,20 @@ Important: do not edit `AGENTS.md` directly. In Spec Kit mode, `sdd-kit check` v
 
 ```mermaid
 flowchart TD
-  START["Start"] --> SPECIFY["speckit.specify"]
+  START["Start"] --> SPECIFY["$speckit-specify"]
   SPECIFY --> SPEC["specs/###-.../spec.md"]
 
   SPEC --> AMBIG{"Ambiguity?"}
-  AMBIG -->|yes| CLARIFY["speckit.clarify"] --> SPEC
+  AMBIG -->|yes| CLARIFY["$speckit-clarify"] --> SPEC
 
-  AMBIG -->|no| PLAN["speckit.plan"]
+  AMBIG -->|no| PLAN["$speckit-plan"]
   PLAN --> PLAN_OUT["plan.md + artifacts + AGENTS.md"]
-  PLAN_OUT --> TASKS["speckit.tasks"]
+  PLAN_OUT --> TASKS["$speckit-tasks"]
   TASKS --> TASKS_MD["tasks.md"]
 
   TASKS_MD --> ANALYZE_OK{"Need analysis?"}
-  ANALYZE_OK -->|yes| ANALYZE["speckit.analyze (read-only)"] --> TASKS_MD
-  ANALYZE_OK -->|no| IMPLEMENT["speckit.implement"]
+  ANALYZE_OK -->|yes| ANALYZE["$speckit-analyze (read-only)"] --> TASKS_MD
+  ANALYZE_OK -->|no| IMPLEMENT["$speckit-implement"]
   IMPLEMENT --> CODE["Code + tests"]
 
   CODE --> DRIFT["sdd-kit check"]
@@ -161,17 +161,17 @@ If the repo uses submodules:
 git submodule update --init --recursive
 ```
 
-### 1) `speckit.specify` (create `spec.md`)
+### 1) `$speckit-specify` (create `spec.md`)
 
 Why: start a new feature and produce a strong `spec.md` (what/why), without implementation details.
 
 How to run (agent):
 
-- `speckit.specify <1-3 sentences describing the feature>`
+- `$speckit-specify <1-3 sentences describing the feature>`
 
 Example:
 
-- `speckit.specify Add PDF export for admin reports`
+- `$speckit-specify Add PDF export for admin reports`
 
 Script-only (no agent, mac/linux):
 
@@ -186,30 +186,30 @@ What it does / outputs:
 - writes `specs/001-feature-name/spec.md` using the template
 - often creates `specs/001-feature-name/checklists/requirements.md` (requirements-quality checklist)
 
-### 1.1) (Optional) `speckit.clarify` (remove ambiguity in `spec.md`)
+### 1.1) (Optional) `$speckit-clarify` (remove ambiguity in `spec.md`)
 
 Why: clarify the spec before planning. It asks a small number of targeted questions (up to 5) and writes answers back into `spec.md`.
 
 How to run:
 
-- `speckit.clarify`
+- `$speckit-clarify`
 
 Result:
 
 - updates the current `specs/001-.../spec.md` (adds a Clarifications section and tightens requirements)
 
-### 2) `speckit.plan` (create `plan.md` + design artifacts)
+### 2) `$speckit-plan` (create `plan.md` + design artifacts)
 
 Why: turn `spec.md` into a technical plan and the artifacts needed for task breakdown.
 
 Prerequisites:
 
-- you are on the `001-...` feature branch (usually created by `speckit.specify`)
+- you are on the `001-...` feature branch (usually created by `$speckit-specify`)
 - `specs/001-.../spec.md` exists
 
 How to run (agent):
 
-- `speckit.plan` (optionally add context: stack/platform/constraints)
+- `$speckit-plan` (optionally add context: stack/platform/constraints)
 
 Script-only:
 
@@ -231,13 +231,13 @@ Common planning artifacts (if applicable):
 - `specs/001-.../contracts/*`
 - `specs/001-.../quickstart.md`
 
-### 3) `speckit.tasks` (generate `tasks.md`)
+### 3) `$speckit-tasks` (generate `tasks.md`)
 
 Why: produce an executable `tasks.md` (IDs, dependencies, and file paths) you can implement step by step.
 
 How to run:
 
-- `speckit.tasks`
+- `$speckit-tasks`
 
 What it does:
 
@@ -248,15 +248,15 @@ What it does:
 Practice:
 
 - if you update `plan.md` or requirements, regenerate `tasks.md` (expected)
-- for a read-only consistency gate before implementation: `speckit.analyze`
+- for a read-only consistency gate before implementation: `$speckit-analyze`
 
-### 4) `speckit.implement` (execute `tasks.md`)
+### 4) `$speckit-implement` (execute `tasks.md`)
 
 Why: implement tasks while preserving traceability "spec -> plan -> tasks -> code".
 
 How to run:
 
-- `speckit.implement`
+- `$speckit-implement`
 
 What it does:
 
@@ -270,13 +270,13 @@ Rules of thumb:
 - Run real checks (tests/lint/build) frequently.
 - If requirements change: update `spec.md/plan.md/tasks.md` before continuing.
 
-### Extra `speckit.*` commands (when needed)
+### Extra `$speckit-*` commands (when needed)
 
-- `speckit.analyze`: read-only cross-artifact consistency report (`spec.md`/`plan.md`/`tasks.md`).
-- `speckit.checklist <topic>`: creates a requirements-quality checklist under `specs/001-.../checklists/*.md` (not code tests).
-- `speckit.planreview`: multi-model review of `spec.md/plan.md/tasks.md` (advisory-only) and writes a report to `specs/001-.../reviews/planreview.md`. Typically run after `speckit.plan` and before `speckit.tasks/implement`. Requires `opencode` installed (and optionally other tools).
-- `speckit.constitution`: create/update `.specify/memory/constitution.md`. In this hybrid mode, do not manually edit `.specify/templates/*` or `.codex/prompts/*` (managed by `sdd-kit`).
-- `speckit.taskstoissues`: turns tasks into GitHub issues (requires a GitHub remote + GitHub MCP configured for the agent).
+- `$speckit-analyze`: read-only cross-artifact consistency report (`spec.md`/`plan.md`/`tasks.md`).
+- `$speckit-checklist <topic>`: creates a requirements-quality checklist under `specs/001-.../checklists/*.md` (not code tests).
+- `$speckit-planreview`: multi-model review of `spec.md/plan.md/tasks.md` (advisory-only) and writes a report to `specs/001-.../reviews/planreview.md`. Typically run after `$speckit-plan` and before `$speckit-tasks`/`$speckit-implement`. Requires `opencode` installed (and optionally other tools).
+- `$speckit-constitution`: create/update `.specify/memory/constitution.md`. In this hybrid mode, do not manually edit `.specify/templates/*` or `.codex/skills/*` (managed by `sdd-kit`).
+- `$speckit-taskstoissues`: turns tasks into GitHub issues (requires a GitHub remote + GitHub MCP configured for the agent).
 
 ### 5) Before PR: drift-check
 
@@ -419,7 +419,7 @@ Options:
 
 ### Spec Kit complains about branch naming
 
-Spec Kit expects branches like `001-feature-name`. Use `speckit.specify`.
+Spec Kit expects branches like `001-feature-name`. Use `$speckit-specify`.
 
 ### Windows
 
