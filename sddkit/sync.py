@@ -305,11 +305,21 @@ def _split_frontmatter_and_body(text: str) -> tuple[dict[str, str], str]:
 
 def _render_speckit_skill(skill_name: str, prompt_body: str, template: str) -> str:
     prompt_body = _strip_speckit_command_references(prompt_body)
-    prompt_body = prompt_body.replace("$ARGUMENTS", "the user request")
+    prompt_body = prompt_body.replace("$ARGUMENTS", "<USER_INPUT>")
     fm, body = _split_frontmatter_and_body(prompt_body)
     description = fm.get("description", "").strip().strip('"').strip("'")
     if not description:
         description = "Spec Kit command wrapper"
+
+    if skill_name != "speckit-planreview":
+        execution_contract = (
+            "## Execution Contract\n\n"
+            "- First, execute the required `.specify/scripts/...` command(s) via terminal.\n"
+            "- Do not read script source files before the first execution attempt.\n"
+            "- Replace `<USER_INPUT>` with the actual text passed to the skill.\n"
+            "- If script execution fails, report the error and only then inspect script files to debug.\n\n"
+        )
+        body = execution_contract + body
 
     content = (
         "---\n"
