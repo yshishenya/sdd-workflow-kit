@@ -304,6 +304,7 @@ def _split_frontmatter_and_body(text: str) -> tuple[dict[str, str], str]:
 
 
 def _render_speckit_skill(skill_name: str, prompt_body: str, template: str) -> str:
+    """Render a Speckit skill with the given name and prompt body."""
     prompt_body = _strip_speckit_command_references(prompt_body)
     prompt_body = prompt_body.replace("$ARGUMENTS", "<USER_INPUT>")
     fm, body = _split_frontmatter_and_body(prompt_body)
