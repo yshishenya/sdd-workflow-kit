@@ -95,11 +95,27 @@ specs/                         # NOT managed: per-feature artifacts (created by 
 
 ### Important: `AGENTS.md`
 
+`AGENTS.md` is the agent context file (commands, repo map, constraints).
+
+In Spec Kit mode, `sdd-kit` does not generate it end-to-end. It is created/updated by the Spec Kit script `update-agent-context` (usually during `speckit.plan`).
+
+To generate/update `AGENTS.md` manually (if needed):
+
+```bash
+bash .specify/scripts/bash/update-agent-context.sh codex
+```
+
 Put local additions into:
 
 - `.sddkit/fragments/AGENTS.manual.md`
 
-`sdd-kit sync` patches only:
+After changing the fragment, apply the overlay:
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
+```
+
+`sync` patches only:
 
 ```text
 <!-- MANUAL ADDITIONS START -->
@@ -109,7 +125,33 @@ Put local additions into:
 
 This prevents “two tools fighting over the same file”.
 
+Important: do not edit `AGENTS.md` directly. In Spec Kit mode, `sdd-kit check` validates that the MANUAL block matches `.sddkit/fragments/AGENTS.manual.md`.
+
 ## Developer Workflow (Step by Step)
+
+### SDD loop (diagram)
+
+```mermaid
+flowchart TD
+  START["Start"] --> SPECIFY["speckit.specify"]
+  SPECIFY --> SPEC["specs/###-.../spec.md"]
+
+  SPEC --> AMBIG{"Ambiguity?"}
+  AMBIG -->|yes| CLARIFY["speckit.clarify"] --> SPEC
+
+  AMBIG -->|no| PLAN["speckit.plan"]
+  PLAN --> PLAN_OUT["plan.md + artifacts + AGENTS.md"]
+  PLAN_OUT --> TASKS["speckit.tasks"]
+  TASKS --> TASKS_MD["tasks.md"]
+
+  TASKS_MD --> ANALYZE_OK{"Need analysis?"}
+  ANALYZE_OK -->|yes| ANALYZE["speckit.analyze (read-only)"] --> TASKS_MD
+  ANALYZE_OK -->|no| IMPLEMENT["speckit.implement"]
+  IMPLEMENT --> CODE["Code + tests"]
+
+  CODE --> DRIFT["sdd-kit check"]
+  DRIFT --> PR["PR"]
+```
 
 ### 0) After `git clone`
 
@@ -282,9 +324,60 @@ Recommended process:
 3. `sync` and `check`
 4. Commit: the submodule bump + updated managed files.
 
-### Enabling Memory Bank (optional)
+### Upstream sync (if this repo is a fork)
+
+If this repository is a fork and you periodically integrate upstream changes, do it as a separate workflow to minimize conflicts.
+
+1) Add an `upstream` remote once:
+
+```bash
+git remote add upstream <UPSTREAM_GIT_URL>
+git fetch upstream --tags
+```
+
+2) Sync on a dedicated branch:
+
+```bash
+git checkout <integration-branch>
+git pull
+git checkout -b chore/upstream-sync-YYYY-MM-DD
+```
+
+3) Integrate upstream (choose one approach per your team policy):
+
+- merge:
+
+```bash
+git merge upstream/<branch>
+```
+
+- rebase:
+
+```bash
+git rebase upstream/<branch>
+```
+
+4) Resolve conflicts, run checks, and commit the result.
+
+### Memory Bank (optional)
 
 Memory Bank can be enabled alongside Spec Kit.
+
+Does it work automatically? No. The kit installs and updates managed scaffolds on `sdd-kit sync`, but the content is maintained by humans (or the agent). There are no background processes.
+
+Default location: `meta/memory_bank/`.
+
+How to use (minimum):
+
+1) Before any task, open `meta/memory_bank/README.md` and follow the Mandatory Reading Sequence.
+2) If you add a dependency or change architecture, update `meta/memory_bank/tech_stack.md` and/or the relevant `patterns/*`.
+3) For tracking work:
+
+- on feature branches, do not edit `meta/memory_bank/current_tasks.md`
+- write updates into `meta/memory_bank/branch_updates/*.md`
+- on the integration branch, copy updates into `current_tasks.md` and delete processed update files
+
+Helper: `meta/tools/merge_task_updates.sh` lists pending branch updates.
 
 In `.sddkit/config.toml`:
 
@@ -300,6 +393,17 @@ Then:
 ```bash
 python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
 ```
+
+### Human-readable specifications
+
+- In Spec Kit mode, your specs/plans/tasks are already human-readable Markdown: `specs/###-.../{spec,plan,tasks}.md`.
+- If you use JSON SDD (optional, `meta/sdd/specs/*.json`), you can render Markdown for review/sharing using your `sdd` CLI:
+
+```bash
+meta/tools/sdd render --help
+```
+
+Then render to a file (flags depend on your `sdd` CLI). Recommendation: keep rendered output next to the JSON specs (for example `meta/sdd/rendered/*.md`) or publish it as a CI artifact.
 
 ## Troubleshooting
 

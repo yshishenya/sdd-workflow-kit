@@ -22,6 +22,7 @@ CLI безопасно и идемпотентно синхронизирует 
 - [CI: drift-check](#ci-drift-check)
 - [Обновления (админу)](#обновления-админу)
 - [Опционально: Memory Bank](#опционально-memory-bank)
+- [Опционально: Человекочитаемые спецификации](#опционально-человекочитаемые-спецификации)
 - [Опционально: Skillpacks](#опционально-skillpacks)
 - [Troubleshooting](#troubleshooting)
 
@@ -145,6 +146,30 @@ git submodule update --init --recursive
 
 Артефакты фичи лежат в `specs/###-feature-name/`.
 
+Схема:
+
+```mermaid
+flowchart TD
+  START["Start"] --> SPECIFY["speckit.specify"]
+  SPECIFY --> SPEC["specs/###-.../spec.md"]
+
+  SPEC --> AMBIG{"Ambiguity?"}
+  AMBIG -->|yes| CLARIFY["speckit.clarify"] --> SPEC
+
+  AMBIG -->|no| PLAN["speckit.plan"]
+  PLAN --> PLAN_OUT["plan.md + artifacts + AGENTS.md"]
+  PLAN_OUT --> TASKS["speckit.tasks"]
+  TASKS --> TASKS_MD["tasks.md"]
+
+  TASKS_MD --> ANALYZE_OK{"Need analysis?"}
+  ANALYZE_OK -->|yes| ANALYZE["speckit.analyze (read-only)"] --> TASKS_MD
+  ANALYZE_OK -->|no| IMPLEMENT["speckit.implement"]
+  IMPLEMENT --> CODE["Code + tests"]
+
+  CODE --> DRIFT["sdd-kit check (drift gate)"]
+  DRIFT --> PR["PR"]
+```
+
 #### `speckit.specify <описание>`
 
 Зачем: стартовать новую фичу и получить качественный `spec.md` (что/зачем), без реализации.
@@ -239,6 +264,26 @@ python3 .tooling/sdd-workflow-kit/bin/sdd-kit check --project .
 python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
 ```
 
+### 3) `AGENTS.md` в Spec Kit mode (как настраивать и обновлять)
+
+`AGENTS.md` — это файл контекста/правил для агента: карта репозитория, команды, ограничения, договоренности по стилю/процессу.
+
+В **Spec Kit mode** `AGENTS.md` создаёт/обновляет сам Spec Kit скриптом `update-agent-context` (обычно это происходит на шаге `speckit.plan`).
+
+Правила:
+
+- Не редактируйте `AGENTS.md` напрямую: Spec Kit будет перегенерировать его.
+- Для ваших организационных заметок используйте **MANUAL-блок**:
+  - редактируйте `.sddkit/fragments/AGENTS.manual.md`
+  - применяйте: `python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .`
+  - `sdd-kit check` проверяет только соответствие MANUAL-блока вашему fragment'у (не весь файл).
+
+Если нужно обновить `AGENTS.md` вручную (например, вы сильно поменяли структуру репозитория или команды):
+
+```bash
+bash .specify/scripts/bash/update-agent-context.sh codex
+```
+
 ## CI: drift-check
 
 Есть два подхода.
@@ -282,13 +327,84 @@ Upstream Spec Kit живет как submodule: `upstreams/spec-kit` (пин по
 
 Процедура:
 
-1. Обновить указатель submodule на нужный тег/коммит.
-2. Прогнать `python3 scripts/smoke_speckit.py`.
-3. Выпустить новую версию kit (тег/релиз).
+1. Обновить указатель submodule на нужный тег/коммит:
+
+```bash
+cd upstreams/spec-kit
+git fetch --tags origin
+git checkout <TAG_OR_SHA>
+cd ../..
+git add upstreams/spec-kit
+git commit -m "chore: bump spec-kit upstream to <TAG_OR_SHA>"
+```
+
+2. Прогнать смоук-тесты (они проверяют, что install + drift-check + основные скрипты работают):
+
+```bash
+python3 scripts/smoke_speckit.py
+python3 scripts/smoke_airis.py
+```
+
+3. Бампнуть версию `sdd-workflow-kit`, поставить тег и запушить (см. ниже).
+
+### Синхронизация с upstream (если ваш проект — fork)
+
+Если проект является форком, делайте синхронизацию с upstream отдельным процессом, чтобы минимизировать конфликты с managed-файлами.
+
+1. Один раз добавить remote `upstream`:
+
+```bash
+git remote add upstream <UPSTREAM_GIT_URL>
+git fetch upstream --tags
+```
+
+2. Создать ветку синхронизации:
+
+```bash
+git checkout <integration-branch>
+git pull
+git checkout -b chore/upstream-sync-YYYY-MM-DD
+```
+
+3. Интегрировать upstream (выберите политику команды):
+
+- merge:
+
+```bash
+git merge upstream/<branch>
+```
+
+- rebase:
+
+```bash
+git rebase upstream/<branch>
+```
+
+4. Разрулить конфликты, прогнать проверки проекта, затем обязательно:
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit check --project .
+```
 
 ## Опционально: Memory Bank
 
 Memory Bank это отдельный слой (`meta/memory_bank/*`). Он не конфликтует со Spec Kit.
+
+**Работает ли он автоматически?** Нет. Kit устанавливает и обновляет managed-шаблоны при `sdd-kit sync`, но содержание Memory Bank вы (или агент) поддерживаете вручную. Никаких фоновых демонов/хуков по умолчанию нет.
+
+Где лежит (по умолчанию): `meta/memory_bank/`.
+
+Как пользоваться (минимум):
+
+1. Перед любой задачей откройте `meta/memory_bank/README.md` и пройдите Mandatory Reading Sequence.
+2. Если добавили зависимость или поменяли архитектуру, обновите `meta/memory_bank/tech_stack.md` и/или соответствующий `meta/memory_bank/patterns/*`.
+3. Для трекинга работы (чтобы избежать конфликтов):
+   - на feature-ветках не правьте `meta/memory_bank/current_tasks.md`
+   - пишите обновления в `meta/memory_bank/branch_updates/*.md`
+   - на integration ветке переносите обновления в `current_tasks.md` и удаляйте обработанные `branch_updates/*`
+
+Хелпер: `meta/tools/merge_task_updates.sh` подскажет, какие `branch_updates/*.md` ждут обработки.
 
 Включается флагами в `.sddkit/config.toml`:
 
@@ -303,6 +419,15 @@ meta_sdd = true
 
 ```bash
 python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
+```
+
+## Опционально: Человекочитаемые спецификации
+
+- В Spec Kit mode спеки/планы/задачи уже человекочитаемые: `specs/###-.../{spec,plan,tasks}.md` (Markdown).
+- Если вы используете JSON SDD (опционально, `meta/sdd/specs/*.json`), то для людей можно генерировать Markdown рендером:
+
+```bash
+meta/tools/sdd render --help
 ```
 
 ## Опционально: Skillpacks
