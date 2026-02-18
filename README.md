@@ -140,14 +140,92 @@ git submodule update --init --recursive
 
 ### 1) SDD цикл (Spec Kit)
 
-Рекомендуемый путь: использовать команды агента `speckit.*`.
-
-1. `speckit.specify`
-2. `speckit.plan`
-3. `speckit.tasks`
-4. `speckit.implement`
+Команды `speckit.*` — это агентские команды (prompts), которые ведут вас по одному каноничному циклу:
+`spec.md -> plan.md -> tasks.md -> implement`.
 
 Артефакты фичи лежат в `specs/###-feature-name/`.
+
+#### `speckit.specify <описание>`
+
+Зачем: стартовать новую фичу и получить качественный `spec.md` (что/зачем), без реализации.
+
+Как использовать:
+
+- запускать из корня репозитория
+- передавать 1-3 предложения описания фичи (без "как")
+
+Что делает:
+
+- создаёт и checkout'ит ветку вида `001-short-name`
+- создаёт папку `specs/001-short-name/`
+- пишет `specs/001-short-name/spec.md` по шаблону
+- часто создаёт `specs/001-short-name/checklists/requirements.md` для самопроверки качества спека
+
+Скрипт без агента (mac/linux):
+
+```bash
+bash .specify/scripts/bash/create-new-feature.sh "Add ..."
+```
+
+#### `speckit.plan`
+
+Зачем: превратить `spec.md` в технический план и дизайн-артефакты.
+
+Что делает:
+
+- создаёт/обновляет `specs/.../plan.md`
+- генерирует дизайн-артефакты в `specs/.../` (например `research.md`, `data-model.md`, `contracts/*`, `quickstart.md` — зависит от проекта)
+- обновляет `AGENTS.md` через `update-agent-context` (overlay MANUAL блок при этом сохраняется)
+
+Как использовать:
+
+- запускать на feature-ветке (`001-...`) после готового `spec.md`
+- если в требованиях есть неоднозначности — сначала `speckit.clarify`
+
+Скрипты без агента:
+
+```bash
+bash .specify/scripts/bash/setup-plan.sh
+bash .specify/scripts/bash/update-agent-context.sh codex
+```
+
+#### `speckit.tasks`
+
+Зачем: получить исполнимый `tasks.md` (задачи с зависимостями и путями к файлам).
+
+Что делает:
+
+- создаёт/обновляет `specs/.../tasks.md` по шаблону
+- раскладывает задачи по user stories, добавляет ID (T001...), пометки параллельности `[P]`
+
+Как использовать:
+
+- запускать после `speckit.plan`
+- если поменяли `plan.md` — перегенерировать `tasks.md` (это ожидаемо)
+
+#### `speckit.implement`
+
+Зачем: выполнить `tasks.md` по шагам, не теряя связь со спеком/планом.
+
+Что делает:
+
+- читает `tasks.md`/`plan.md` (и опциональные артефакты)
+- реализует задачи фазами, отмечает выполненные как `[X]` в `tasks.md`
+- может остановиться, если requirements-checklists в `specs/.../checklists/` не закрыты
+
+Как использовать:
+
+- делать по 1 задаче за раз, часто запускать реальные проверки (тесты/линт/сборка)
+- перед PR прогонять `sdd-kit check`
+
+#### Дополнительные команды `speckit.*` (по ситуации)
+
+- `speckit.clarify`: если в `spec.md` есть неоднозначности; задаёт вопросы и дописывает ответы в `spec.md`.
+- `speckit.checklist`: создаёт чеклист качества требований в `specs/.../checklists/*.md` (это не тесты кода, это "unit tests" для спека).
+- `speckit.analyze`: read-only анализ согласованности `spec.md`/`plan.md`/`tasks.md` (полезно перед implement).
+- `speckit.constitution`: создаёт/обновляет `.specify/memory/constitution.md` (принципы). В гибридном режиме не редактируйте `.specify/templates/*` и `.codex/prompts/*` вручную: они managed и пинятся kit'ом.
+- `speckit.taskstoissues`: превращает задачи в GitHub issues (требует GitHub remote и настроенный GitHub MCP у агента).
+
 
 ### 2) Перед PR
 

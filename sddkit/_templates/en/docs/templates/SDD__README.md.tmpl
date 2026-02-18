@@ -119,53 +119,121 @@ If the repo uses submodules:
 git submodule update --init --recursive
 ```
 
-### 1) Create a feature
+### 1) `speckit.specify` (create `spec.md`)
 
-Recommended: agent command `speckit.specify`.
+Why: start a new feature and produce a strong `spec.md` (what/why), without implementation details.
 
-Script-only (no agent):
+How to run (agent):
+
+- `speckit.specify <1-3 sentences describing the feature>`
+
+Example:
+
+- `speckit.specify Add PDF export for admin reports`
+
+Script-only (no agent, mac/linux):
 
 ```bash
 bash .specify/scripts/bash/create-new-feature.sh "Short feature description"
 ```
 
+What it does / outputs:
+
+- creates and checks out a branch like `001-feature-name`
+- creates `specs/001-feature-name/`
+- writes `specs/001-feature-name/spec.md` using the template
+- often creates `specs/001-feature-name/checklists/requirements.md` (requirements-quality checklist)
+
+### 1.1) (Optional) `speckit.clarify` (remove ambiguity in `spec.md`)
+
+Why: clarify the spec before planning. It asks a small number of targeted questions (up to 5) and writes answers back into `spec.md`.
+
+How to run:
+
+- `speckit.clarify`
+
 Result:
 
-- creates a branch like `001-feature-name`
-- creates `specs/001-feature-name/spec.md`
+- updates the current `specs/001-.../spec.md` (adds a Clarifications section and tightens requirements)
 
-### 2) Planning
+### 2) `speckit.plan` (create `plan.md` + design artifacts)
 
-Recommended: `speckit.plan`.
+Why: turn `spec.md` into a technical plan and the artifacts needed for task breakdown.
+
+Prerequisites:
+
+- you are on the `001-...` feature branch (usually created by `speckit.specify`)
+- `specs/001-.../spec.md` exists
+
+How to run (agent):
+
+- `speckit.plan` (optionally add context: stack/platform/constraints)
 
 Script-only:
 
 ```bash
 bash .specify/scripts/bash/setup-plan.sh
+bash .specify/scripts/bash/update-agent-context.sh codex
 ```
 
-Result:
+What it does / outputs:
 
 - creates/updates `specs/001-.../plan.md`
-- (usually) updates `AGENTS.md` via `update-agent-context`
+- usually creates extra files in `specs/001-.../` (varies by project)
+- updates `AGENTS.md` via `update-agent-context` (the MANUAL overlay block is preserved)
 
-### 3) Tasks
+Common planning artifacts (if applicable):
 
-Command: `speckit.tasks`.
+- `specs/001-.../research.md`
+- `specs/001-.../data-model.md`
+- `specs/001-.../contracts/*`
+- `specs/001-.../quickstart.md`
 
-Result:
+### 3) `speckit.tasks` (generate `tasks.md`)
 
-- creates/updates `specs/001-.../tasks.md`
+Why: produce an executable `tasks.md` (IDs, dependencies, and file paths) you can implement step by step.
 
-### 4) Implement
+How to run:
 
-Command: `speckit.implement`.
+- `speckit.tasks`
+
+What it does:
+
+- reads `spec.md` and `plan.md` (and optional artifacts, if present)
+- generates `specs/001-.../tasks.md` using the template
+- uses checkbox tasks like `- [ ] T001 ... path/to/file` and groups tasks by user story
+
+Practice:
+
+- if you update `plan.md` or requirements, regenerate `tasks.md` (expected)
+- for a read-only consistency gate before implementation: `speckit.analyze`
+
+### 4) `speckit.implement` (execute `tasks.md`)
+
+Why: implement tasks while preserving traceability "spec -> plan -> tasks -> code".
+
+How to run:
+
+- `speckit.implement`
+
+What it does:
+
+- reads `tasks.md`/`plan.md` (and optional artifacts)
+- executes tasks in phases and marks completed items as `[X]` in `tasks.md`
+- may stop and ask for confirmation if checklists under `specs/001-.../checklists/` are incomplete
 
 Rules of thumb:
 
 - Do one task at a time.
 - Run real checks (tests/lint/build) frequently.
 - If requirements change: update `spec.md/plan.md/tasks.md` before continuing.
+
+### Extra `speckit.*` commands (when needed)
+
+- `speckit.analyze`: read-only cross-artifact consistency report (`spec.md`/`plan.md`/`tasks.md`).
+- `speckit.checklist <topic>`: creates a requirements-quality checklist under `specs/001-.../checklists/*.md` (not code tests).
+- `speckit.constitution`: create/update `.specify/memory/constitution.md`. In this hybrid mode, do not manually edit `.specify/templates/*` or `.codex/prompts/*` (managed by `sdd-kit`).
+- `speckit.taskstoissues`: turns tasks into GitHub issues (requires a GitHub remote + GitHub MCP configured for the agent).
 
 ### 5) Before PR: drift-check
 
