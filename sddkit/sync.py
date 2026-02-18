@@ -311,15 +311,14 @@ def _render_speckit_skill(skill_name: str, prompt_body: str, template: str) -> s
     if not description:
         description = "Spec Kit command wrapper"
 
-    if skill_name != "speckit-planreview":
-        execution_contract = (
-            "## Execution Contract\n\n"
-            "- First, execute the required `.specify/scripts/...` command(s) via terminal.\n"
-            "- Do not read script source files before the first execution attempt.\n"
-            "- Replace `<USER_INPUT>` with the actual text passed to the skill.\n"
-            "- If script execution fails, report the error and only then inspect script files to debug.\n\n"
-        )
-        body = execution_contract + body
+    execution_contract = (
+        "## Execution Contract\n\n"
+        "- If this skill includes `.specify/scripts/...` command(s), execute them first via terminal.\n"
+        "- Do not read script source files before the first execution attempt.\n"
+        "- Replace `<USER_INPUT>` with the actual text passed to the skill.\n"
+        "- If script execution fails, report the error and only then inspect script files to debug.\n\n"
+    )
+    body = execution_contract + body
 
     content = (
         "---\n"
