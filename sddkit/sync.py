@@ -758,7 +758,11 @@ def sync_project(
         plan += _plan_writes(project_root, kit_root, cfg, detection, locale)
 
     if skills_install_pack is not None:
-        plan += _plan_skill_install(project_root, kit_root, pack=skills_install_pack, dest=skills_install_to or cfg.skills_default_install_to)
+        skills_dest = skills_install_to or cfg.skills_default_install_to
+        if skills_install_pack == "speckit":
+            plan += _plan_speckit_skill_install(project_root, kit_root, cfg=cfg, detection=detection, dest=skills_dest)
+        else:
+            plan += _plan_skill_install(project_root, kit_root, pack=skills_install_pack, dest=skills_dest)
 
     _assert_no_duplicate_plan_targets(plan, project_root=project_root)
 
@@ -894,6 +898,75 @@ def _plan_skill_install(project_root: Path, kit_root: Path, *, pack: str, dest: 
             continue
         items.append(PlannedCopyDir(source=skill_dir, target=dst, reason="install skill dir"))
     return items
+
+
+def _plan_speckit_skill_install(
+    project_root: Path,
+    kit_root: Path,
+    *,
+    cfg: SddKitConfig,
+    detection: dict[str, str],
+    dest: str,
+) -> list[PlanItem]:
+    """Install generated speckit Codex skills into project or global CODEX_HOME."""
+
+    if dest == "project":
+        out_root = project_root / cfg.codex_root / "skills"
+    elif dest == "global":
+        codex_home = Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex")))
+        out_root = codex_home / "skills"
+    else:
+        return [PlannedSkip(target=project_root, reason=f"unknown skills destination: {dest}")]
+
+    upstream = ensure_speckit_upstream(kit_root)
+    plan: list[PlanItem] = []
+
+    for src in list_command_templates(upstream):
+        name = src.stem
+        raw = src.read_text(encoding="utf-8", errors="replace")
+        prompt = generate_command_prompt(
+            raw,
+            script_variant=cfg.speckit_script_variant,
+            agent="codex",
+            args_format="$ARGUMENTS",
+        )
+        prompt = _render_speckit_skill(
+            skill_name=f"speckit-{name}",
+            prompt_body=prompt,
+            template=f"speckit/commands/{name}.md",
+        )
+        target = out_root / f"speckit-{name}" / "SKILL.md"
+        if target.exists() and cfg.safe_mode and not is_managed_file(target):
+            plan.append(PlannedUnmanaged(target=target, reason="exists but is not managed (safe_mode)"))
+            continue
+        reason = "create" if not target.exists() else ("update (managed)" if is_managed_file(target) else "update")
+        plan.append(PlannedWrite(target=target, content=prompt, reason=reason))
+
+    overlay_tmpl = load_template("en", "speckit/commands/planreview.md.tmpl").text
+    langs = [p for p in re.split(r"[,\s]+", detection.get("languages", "") or "") if p]
+    pms = [p for p in re.split(r"[,\s]+", detection.get("package_managers", "") or "") if p]
+    overlay_body = render_template(
+        overlay_tmpl,
+        {
+            "project_name": cfg.project_name,
+            "languages": langs,
+            "package_managers": pms,
+            "specs_root": cfg.specs_root,
+        },
+    )
+    overlay_prompt = _render_speckit_skill(
+        skill_name="speckit-planreview",
+        prompt_body=overlay_body,
+        template="speckit/commands/planreview.md",
+    )
+    overlay_target = out_root / "speckit-planreview" / "SKILL.md"
+    if overlay_target.exists() and cfg.safe_mode and not is_managed_file(overlay_target):
+        plan.append(PlannedUnmanaged(target=overlay_target, reason="exists but is not managed (safe_mode)"))
+    else:
+        reason = "create" if not overlay_target.exists() else ("update (managed)" if is_managed_file(overlay_target) else "update")
+        plan.append(PlannedWrite(target=overlay_target, content=overlay_prompt, reason=reason))
+
+    return plan
 
 
 def _materialize_skill_installs(plan: list[PlanItem], project_root: Path, kit_root: Path, *, pack: str, dest: str, dry_run: bool) -> None:

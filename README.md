@@ -445,6 +445,16 @@ python3 bin/sdd-kit import-codex-skills --from "$HOME/.codex/skills" --pack code
 python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --to project
 ```
 
+Установить **Spec Kit команды** (`speckit-*`) как Codex skills:
+
+```bash
+# В проект (./.codex/skills/speckit-*)
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --pack speckit --to project
+
+# Глобально (~/.codex/skills/speckit-*) — если текущая сессия Codex не читает project-local skills
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --pack speckit --to global
+```
+
 ## Troubleshooting
 
 ### `UNMANAGED ... (safe_mode)`
@@ -455,6 +465,8 @@ python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --to pr
 
 - переименовать/удалить файл и снова `sync`
 - выключить управление этим файлом в `[manage]`
+- для старых глобальных `~/.codex/skills/speckit-*` (не managed) удалите эти каталоги и повторите:
+  `python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --pack speckit --to global`
 
 ### В CI не виден `upstreams/spec-kit`
 
