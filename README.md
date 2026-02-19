@@ -334,6 +334,11 @@ python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
   - base branch, title (Conventional Commits), обязательные разделы описания, ссылки на spec/work-item, pre-review проверки.
   - описание PR должно быть в структурированном Markdown (заголовки/списки/чеклисты), не «простыня» plain text.
   - запрещены видимые escape-переносы как текст (`\n`, `\r\n`, `\t`) в теле PR; нужны реальные переносы строк.
+- Также в `AGENTS` добавлены:
+  - политика pinning версий для server-side обновлений модулей/инструментов (без floating `latest/main`).
+  - принципы Git workflow.
+  - стандарт коммитов (Conventional Commits + body с why/impact).
+  - правила ответа на комментарии в PR (fix note / rationale / resolution discipline).
 
 Если проект старый и в `.sddkit/fragments/AGENTS.manual.md` у вас еще короткий legacy-текст, `sdd-kit sync` обновит его на новый шаблон автоматически.
 Если файл уже редактировали вручную, kit его не перезапишет.

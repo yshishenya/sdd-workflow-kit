@@ -59,6 +59,40 @@ Do not edit the shared task list on feature branches.
 - If an older version is required, document the reason in the work item spec and PR.
 - If usage is unclear, consult official online docs/changelog first and follow primary-source guidance.
 
+## Version Pinning Policy
+
+- For server-side module/tool updates, always pin an explicit version (release tag or commit SHA).
+- Do not use floating refs in production/server configs (`latest`, `main`, wildcard ranges).
+- Every update PR must document: previous version, new version, rollback steps.
+
+## Git Workflow Principles
+
+- Use one branch per logical change.
+- Keep commits atomic and scoped to one purpose.
+- Rebase/sync with `{{integration_branch}}` before merge.
+- Never force-push to protected/shared branches.
+
+## Commit Message Standard
+
+- Use Conventional Commits: `type(scope): summary`.
+- Write summary in imperative mood and keep it concise.
+- In commit body, explain why, what changed, and impact/risk.
+- Reference issue/spec/work item when relevant.
+
+## Pull Request Standard
+
+- Include: context/problem, solution summary, validation steps, and risks/rollback.
+- Keep PR scope focused (no unrelated changes).
+- Attach screenshots/logs/examples for UX/API changes when helpful.
+- Ensure CI and required checks pass before requesting review.
+
+## Handling PR Review Comments
+
+- Respond to every substantive comment.
+- For fixes: push code changes and reply with a short resolution note.
+- For disagreements: provide rationale and propose an alternative.
+- Resolve comment threads only after the issue is addressed or reviewer alignment is reached.
+
 ## Type Safety
 
 - All new/modified functions must have type hints.
