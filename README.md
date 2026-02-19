@@ -337,6 +337,7 @@ python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
 - Также в `AGENTS` добавлены:
   - политика pinning версий для server-side обновлений модулей/инструментов (без floating `latest/main`).
   - принципы Git workflow.
+  - обязательное правило: перед началом реализации создать отдельную ветку с названием по сути задачи и перейти в неё.
   - стандарт коммитов (Conventional Commits + body с why/impact).
   - правила ответа на комментарии в PR (fix note / rationale / resolution discipline).
 

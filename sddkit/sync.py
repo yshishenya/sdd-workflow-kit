@@ -396,6 +396,8 @@ def _default_agents_manual_overlay(cfg: SddKitConfig) -> str:
         "",
         "## Git workflow principles",
         "",
+        "- Before starting implementation, create a dedicated branch and switch to it.",
+        "- Branch name must reflect work scope (for example: `feature/<short-slug>`, `fix/<short-slug>`, `chore/<short-slug>`).",
         "- Use one branch per logical change.",
         "- Keep commits atomic and scoped to one purpose.",
         f"- Rebase/sync with `{cfg.integration_branch}` before merge.",
