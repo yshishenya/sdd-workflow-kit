@@ -347,6 +347,14 @@ def _parse_speckit_agents(raw: str) -> list[str]:
 
 
 def _default_agents_manual_overlay(cfg: SddKitConfig) -> str:
+    """Generate a manual overlay for default agents.
+    
+    Args:
+        cfg (SddKitConfig): Configuration object containing paths and settings.
+    
+    Returns:
+        str: The generated manual overlay as a formatted string.
+    """
     docs_root = cfg.docs_root.strip("/").rstrip("/") or "docs"
     docs_sdd = f"{docs_root}/SDD/README.md"
     memory_bank_root = cfg.memory_bank_root.strip("/").rstrip("/") or "meta/memory_bank"
