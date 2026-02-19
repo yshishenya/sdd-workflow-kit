@@ -151,6 +151,21 @@ def _infer_commands(detection: dict[str, str]) -> dict[str, str]:
 
 
 def _render_agents_md(*, project_root: Path, kit_root: Path, cfg: SddKitConfig, detection: dict[str, str], locale: str) -> str:
+    """Render the agents markdown content.
+    
+    This function generates a markdown representation of agents based on the
+    provided configuration and detection data.  It loads the appropriate template,
+    gathers skill information from the specified skillpack directory, and infers
+    commands  from the detection dictionary. The final rendered content may include
+    additional fragments if they exist in the project  directory.
+    
+    Args:
+        project_root (Path): The root directory of the project.
+        kit_root (Path): The root directory of the kit.
+        cfg (SddKitConfig): The configuration object containing project settings.
+        detection (dict[str, str]): A dictionary containing detection information.
+        locale (str): The locale for the rendering process.
+    """
     agents_tmpl = "agents/AGENTS.airis.md.tmpl" if (cfg.profile == "airis" or cfg.manage_memory_bank) else "agents/AGENTS.md.tmpl"
     # AGENTS.md is intentionally English-only across locales for consistency.
     tpl = load_template("en", agents_tmpl).text
@@ -347,6 +362,8 @@ def _parse_speckit_agents(raw: str) -> list[str]:
 
 
 def _default_agents_manual_overlay(cfg: SddKitConfig) -> str:
+    """Generate a manual overlay for default agents based on the provided
+    configuration."""
     docs_root = cfg.docs_root.strip("/").rstrip("/") or "docs"
     docs_sdd = f"{docs_root}/SDD/README.md"
     memory_bank_root = cfg.memory_bank_root.strip("/").rstrip("/") or "meta/memory_bank"
