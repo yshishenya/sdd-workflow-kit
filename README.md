@@ -19,6 +19,7 @@ CLI безопасно и идемпотентно синхронизирует 
 - [Как это работает](#как-это-работает)
 - [Установка в проект (админу)](#установка-в-проект-админу)
 - [Как пользоваться (разработчику)](#как-пользоваться-разработчику)
+- [Каталог Speckit Skills](#каталог-speckit-skills)
 - [CI: drift-check](#ci-drift-check)
 - [Обновления (админу)](#обновления-админу)
 - [Опционально: Memory Bank](#опционально-memory-bank)
@@ -169,6 +170,48 @@ flowchart TD
   CODE --> DRIFT["sdd-kit check (drift gate)"]
   DRIFT --> PR["PR"]
 ```
+
+### Как skills реально исполняются (runtime flow)
+
+```mermaid
+flowchart LR
+  U["User runs $speckit-..."] --> S["Load .codex/skills/speckit-*/SKILL.md"]
+  S --> C["Execution Contract"]
+  C --> R["Run .specify/scripts/... first"]
+  R --> O["Parse script output (often JSON)"]
+  O --> A["Update specs/NNN-... artifacts"]
+  A --> X["Return report / next step"]
+```
+
+Runtime rules (important):
+
+- каждый `speckit-*` skill содержит `Execution Contract`
+- если в skill есть `.specify/scripts/...`, сначала запускается скрипт, потом анализ/правки
+- чтение исходников скриптов до первой попытки запуска не является корректным путем
+- при ошибке запуска: сначала показать ошибку, потом уже разбирать скрипт
+
+## Каталог Speckit Skills
+
+Все команды запускаются как `$speckit-...` в Codex.
+
+| Skill | Зачем | Что создает/обновляет | Когда запускать |
+|---|---|---|---|
+| `$speckit-specify` | Создать новую спецификацию фичи | `specs/NNN-.../spec.md`, ветка `NNN-...`, checklist | Старт новой фичи |
+| `$speckit-clarify` | Снять неоднозначности в требованиях | `spec.md` (Clarifications + правки) | Перед plan, если есть пробелы |
+| `$speckit-plan` | Построить техплан и артефакты дизайна | `plan.md`, `research.md`, `data-model.md`, `contracts/*`, `quickstart.md`, `AGENTS.md` | После готового `spec.md` |
+| `$speckit-tasks` | Разложить работу на исполнимые задачи | `tasks.md` | После `plan.md` |
+| `$speckit-implement` | Выполнить план по задачам | Код + тесты + отметки в `tasks.md` | После `tasks.md` |
+| `$speckit-analyze` | Проверить согласованность spec/plan/tasks | Read-only report в ответе агента | Перед implement или перед PR |
+| `$speckit-checklist` | Проверить качество требований по теме | `specs/.../checklists/*.md` | После specify/clarify/plan |
+| `$speckit-constitution` | Заполнить/обновить принципы проекта | `.specify/memory/constitution.md` | Инициализация/обновление правил |
+| `$speckit-taskstoissues` | Конвертировать задачи в GitHub issues | Issues в GitHub | Когда нужно внешний трекинг |
+| `$speckit-planreview` | Мульти-модельное ревью spec/plan/tasks | `specs/.../reviews/planreview.md` | После plan, до tasks/implement |
+
+Зависимости и внешние инструменты:
+
+- базовый цикл (`specify/plan/tasks/implement`) работает на `.specify/scripts/*`
+- для `$speckit-planreview` желательно установленный `opencode`
+- для `$speckit-taskstoissues` нужен GitHub remote и рабочая интеграция GitHub MCP
 
 #### `$speckit-specify <описание>`
 
@@ -467,6 +510,21 @@ python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --pack 
 - выключить управление этим файлом в `[manage]`
 - для старых глобальных `~/.codex/skills/speckit-*` (не managed) удалите эти каталоги и повторите:
   `python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --pack speckit --to global`
+
+### Не видно `speckit-*` в `/skills`
+
+Проверьте, откуда текущая сессия Codex читает skills (project-local или global) и установите туда:
+
+```bash
+# project-local
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --pack speckit --to project
+
+# global
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --pack speckit --to global
+```
+
+Если раньше ставились legacy навыки вручную, удалите старые `~/.codex/skills/speckit-*` и установите заново.
+После установки откройте новый чат (или перезапустите Codex), затем проверьте `/skills`.
 
 ### В CI не виден `upstreams/spec-kit`
 

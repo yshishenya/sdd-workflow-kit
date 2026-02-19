@@ -153,6 +153,46 @@ flowchart TD
   DRIFT --> PR["PR"]
 ```
 
+### Как skills исполняются (runtime flow)
+
+```mermaid
+flowchart LR
+  U["Пользователь запускает $speckit-..."] --> S["Загрузка .codex/skills/speckit-*/SKILL.md"]
+  S --> C["Execution Contract"]
+  C --> R["Сначала запуск .specify/scripts/..."]
+  R --> O["Разбор вывода скрипта (часто JSON)"]
+  O --> A["Обновление артефактов specs/NNN-..."]
+  A --> X["Ответ и следующий шаг"]
+```
+
+Правила runtime:
+
+- каждый `speckit-*` skill содержит `Execution Contract`
+- если skill ссылается на `.specify/scripts/...`, сначала запускаются скрипты, потом анализ/правки
+- исходники скриптов не читаются до первой попытки запуска
+- если запуск скрипта упал, сначала возвращается ошибка, затем уже идет разбор скрипта
+
+### Каталог команд Speckit
+
+| Skill | Зачем | Что создает/обновляет | Когда запускать |
+|---|---|---|---|
+| `$speckit-specify` | Создать спецификацию новой фичи | `specs/NNN-.../spec.md`, ветка `NNN-...`, checklist | Старт фичи |
+| `$speckit-clarify` | Убрать неоднозначности в требованиях | правки `spec.md` (clarifications) | До plan, если спек нечеткий |
+| `$speckit-plan` | Сделать техплан и дизайн-артефакты | `plan.md`, `research.md`, `data-model.md`, `contracts/*`, `quickstart.md`, `AGENTS.md` | После `spec.md` |
+| `$speckit-tasks` | Сгенерировать исполнимый декомпозированный план задач | `tasks.md` | После `plan.md` |
+| `$speckit-implement` | Выполнить задачи с трассируемостью | Код/тесты + `[X]` в `tasks.md` | После `tasks.md` |
+| `$speckit-analyze` | Проверить согласованность и покрытие | read-only отчёт в чате | Перед implement / перед PR |
+| `$speckit-checklist` | Проверить качество требований | `specs/.../checklists/*.md` | После specify/clarify/plan |
+| `$speckit-constitution` | Описать принципы проекта | `.specify/memory/constitution.md` | Инициализация/обновление правил |
+| `$speckit-taskstoissues` | Выгрузить задачи в GitHub issues | GitHub issues | Когда нужен внешний трекинг |
+| `$speckit-planreview` | Мульти-модельное advisory review | `specs/.../reviews/planreview.md` | После plan, до tasks/implement |
+
+### Внешние зависимости команд
+
+- базовый цикл (`specify/plan/tasks/implement`) работает через `.specify/scripts/*`
+- для `$speckit-planreview` желательно установленный `opencode`
+- для `$speckit-taskstoissues` нужен GitHub remote и рабочая GitHub MCP/auth интеграция
+
 ### 0) После `git clone`
 
 Если в репозитории есть submodules:
@@ -420,6 +460,26 @@ meta/tools/sdd render --help
 
 - переименовать/удалить файл и снова `sync`
 - отключить управление этим файлом в `[manage]`
+
+Для старых глобальных unmanaged skills (`~/.codex/skills/speckit-*`) удалите эти каталоги и поставьте заново:
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --pack speckit --to global
+```
+
+### В `/skills` не видно `speckit-*`
+
+Поставьте skills туда, откуда их читает текущая сессия Codex:
+
+```bash
+# project-local
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --pack speckit --to project
+
+# global
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --pack speckit --to global
+```
+
+После установки откройте новый чат (или перезапустите Codex) и проверьте `/skills`.
 
 ### Spec Kit ругается на ветку
 

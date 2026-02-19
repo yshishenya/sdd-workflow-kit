@@ -153,6 +153,46 @@ flowchart TD
   DRIFT --> PR["PR"]
 ```
 
+### Skill runtime flow
+
+```mermaid
+flowchart LR
+  U["User runs $speckit-..."] --> S["Load .codex/skills/speckit-*/SKILL.md"]
+  S --> C["Execution Contract"]
+  C --> R["Run .specify/scripts/... first"]
+  R --> O["Parse script output (often JSON)"]
+  O --> A["Update specs/NNN-... artifacts"]
+  A --> X["Return report and next step"]
+```
+
+Runtime rules:
+
+- every `speckit-*` skill includes an `Execution Contract`
+- if a skill references `.specify/scripts/...`, run scripts first, then analyze/update artifacts
+- do not read script source files before the first execution attempt
+- if script execution fails, report the error first, then inspect script sources for debugging
+
+### Speckit command catalog
+
+| Skill | Why | Main outputs | Typical timing |
+|---|---|---|---|
+| `$speckit-specify` | Create a new feature specification | `specs/NNN-.../spec.md`, branch `NNN-...`, checklist | Start of a feature |
+| `$speckit-clarify` | Resolve requirement ambiguity | `spec.md` updates (clarifications) | Before plan when spec is ambiguous |
+| `$speckit-plan` | Build technical plan and design artifacts | `plan.md`, `research.md`, `data-model.md`, `contracts/*`, `quickstart.md`, `AGENTS.md` | After `spec.md` |
+| `$speckit-tasks` | Generate executable task breakdown | `tasks.md` | After `plan.md` |
+| `$speckit-implement` | Execute tasks with traceability | Code/tests + `[X]` updates in `tasks.md` | After `tasks.md` |
+| `$speckit-analyze` | Consistency and coverage analysis | Read-only report in chat | Before implement / before PR |
+| `$speckit-checklist` | Validate requirement quality | `specs/.../checklists/*.md` | After specify/clarify/plan |
+| `$speckit-constitution` | Define project principles | `.specify/memory/constitution.md` | Repo initialization / governance updates |
+| `$speckit-taskstoissues` | Export tasks to GitHub issues | GitHub issues | When external tracking is needed |
+| `$speckit-planreview` | Multi-model advisory review | `specs/.../reviews/planreview.md` | After plan, before tasks/implement |
+
+### Tool prerequisites
+
+- core flow (`specify/plan/tasks/implement`) depends on `.specify/scripts/*`
+- `$speckit-planreview` is best with `opencode` installed
+- `$speckit-taskstoissues` requires GitHub remote and a working GitHub MCP/auth setup
+
 ### 0) After `git clone`
 
 If the repo uses submodules:
@@ -416,6 +456,26 @@ Options:
 
 - rename/remove it, then run `sync` again
 - disable managing that area in `[manage]`
+
+For legacy unmanaged global skills (`~/.codex/skills/speckit-*`), delete those directories and reinstall:
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --pack speckit --to global
+```
+
+### `speckit-*` commands are missing in `/skills`
+
+Install skills to the location used by your Codex session:
+
+```bash
+# project-local
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --pack speckit --to project
+
+# global
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit install-skills --project . --pack speckit --to global
+```
+
+Then start a new chat (or restart Codex) and check `/skills`.
 
 ### Spec Kit complains about branch naming
 
