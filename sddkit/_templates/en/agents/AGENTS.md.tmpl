@@ -8,6 +8,11 @@ This repository uses **Spec-Driven Development (SDD)** and a shared toolchain.
 - Package managers: `{{package_managers}}`
 - sdd-workflow-kit version: `{{kit_version}}`
 
+## Communication Language
+
+- Keep this `AGENTS.md` file in English.
+- For user-facing communication, use the configured locale from `.sddkit/config.toml` (`[sddkit].locale` = `{{configured_locale}}`).
+
 ## Workflow (SDD)
 
 - Write or update specs first (no coding before intent is captured).
@@ -20,6 +25,13 @@ This repository uses **Spec-Driven Development (SDD)** and a shared toolchain.
 - Test: `{{test_cmd}}`
 - Lint: `{{lint_cmd}}`
 - Format: `{{format_cmd}}`
+
+## Dependencies (Freshness Policy)
+
+- Before adding/updating a dependency, verify the latest stable version and compatibility with this repo.
+- Prefer latest stable compatible versions by default.
+- If an older version is required, record the reason in the spec/work item and PR.
+- If usage is unclear, consult official online docs/changelogs first and follow primary-source guidance.
 
 ## Skills
 

@@ -152,7 +152,8 @@ def _infer_commands(detection: dict[str, str]) -> dict[str, str]:
 
 def _render_agents_md(*, project_root: Path, kit_root: Path, cfg: SddKitConfig, detection: dict[str, str], locale: str) -> str:
     agents_tmpl = "agents/AGENTS.airis.md.tmpl" if (cfg.profile == "airis" or cfg.manage_memory_bank) else "agents/AGENTS.md.tmpl"
-    tpl = load_template(locale, agents_tmpl).text
+    # AGENTS.md is intentionally English-only across locales for consistency.
+    tpl = load_template("en", agents_tmpl).text
 
     skillpack_dir = kit_root / "skillpacks" / cfg.skills_default_pack
     skills = list_skillpack_skills(skillpack_dir)
@@ -181,6 +182,7 @@ def _render_agents_md(*, project_root: Path, kit_root: Path, cfg: SddKitConfig, 
         "skills_block": skills_block,
         "codex_home": os.environ.get("CODEX_HOME", str(Path.home() / ".codex")),
         "kit_path": cfg.github_kit_path,
+        "configured_locale": cfg.locale,
     }
     rendered = render_template(tpl, data)
 
@@ -364,11 +366,27 @@ def _default_agents_manual_overlay(cfg: SddKitConfig) -> str:
         f"- Start with `{docs_sdd}` (canonical workflow and command usage).",
         f"- Before PR run `python3 {cfg.github_kit_path}/bin/sdd-kit check --project .`.",
         "",
+        "## Communication language",
+        "",
+        "- Keep `AGENTS.md` content in English.",
+        (
+            "- In user-facing communication, use the language configured in "
+            "`.sddkit/config.toml` under `[sddkit].locale` "
+            f"(current: `{cfg.locale}`)."
+        ),
+        "",
         "## SDD command loop",
         "",
         "- Use `$speckit-specify -> $speckit-plan -> $speckit-tasks -> $speckit-implement`.",
         "- Use `$speckit-analyze` before implementation/PR when consistency checks are needed.",
         "- Use `$speckit-planreview` after plan when you need multi-model advisory review.",
+        "",
+        "## Dependencies and library freshness",
+        "",
+        "- Before adding/updating a dependency, verify the latest stable version and project compatibility.",
+        "- Prefer the latest stable compatible versions by default.",
+        "- If an older version is required, document the reason in spec/work-item and PR.",
+        "- If dependency usage is unclear, check official online docs/changelog first and follow primary-source guidance.",
         "",
         "## Pull Request rules",
         "",

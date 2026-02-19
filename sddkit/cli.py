@@ -77,7 +77,13 @@ def main(argv: list[str] | None = None) -> int:
     if ns.cmd == "bootstrap":
         if not config_path.exists():
             detection = detect_project(project_root)
-            write_default_config(config_path, project_root=project_root, detection=detection, profile_override=ns.profile)
+            write_default_config(
+                config_path,
+                project_root=project_root,
+                detection=detection,
+                profile_override=ns.profile,
+                locale_override=ns.locale,
+            )
             print(f"Wrote {config_path}")
         cfg = load_config(config_path)
         locale = ns.locale or cfg.locale

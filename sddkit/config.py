@@ -107,10 +107,11 @@ def write_default_config(
     project_root: Path,
     detection: dict[str, Any],
     profile_override: str | None = None,
+    locale_override: str | None = None,
 ) -> None:
     config_path.parent.mkdir(parents=True, exist_ok=True)
     # Keep config minimal and stable; detection is informational.
-    locale = os.environ.get("SDDKIT_LOCALE", "en")
+    locale = locale_override or os.environ.get("SDDKIT_LOCALE", "en")
     project_name = project_root.name
     detected_profile = str(detection.get("recommended_profile") or "generic")
     profile = profile_override if profile_override and profile_override != "auto" else detected_profile

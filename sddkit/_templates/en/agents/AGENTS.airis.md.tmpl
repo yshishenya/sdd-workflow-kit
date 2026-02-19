@@ -23,6 +23,11 @@ If the Memory Bank is missing or incomplete, bootstrap it first via this kit and
 - Integration branch: `{{integration_branch}}`
 - Upstream base (if any): `{{upstream_project}}`
 
+## Communication Language
+
+- Keep this `AGENTS.md` file in English.
+- For user-facing communication, use the configured locale from `.sddkit/config.toml` (`[sddkit].locale` = `{{configured_locale}}`).
+
 ## Fork / Upstream Sync Discipline (if this repo is a fork)
 
 Goal: keep the diff small to minimize conflicts with upstream updates.
@@ -46,6 +51,13 @@ Do not edit the shared task list on feature branches.
 - Specs: `{{meta_sdd_root}}/specs/{pending,active,completed}/`
 - Schema cache: `{{meta_sdd_root}}/schema/`
 - Always use wrapper: `{{meta_tools_root}}/sdd ...`
+
+## Dependencies (Freshness Policy)
+
+- Before adding/updating a dependency, verify the latest stable version and compatibility with current stack.
+- Prefer latest stable compatible versions by default.
+- If an older version is required, document the reason in the work item spec and PR.
+- If usage is unclear, consult official online docs/changelog first and follow primary-source guidance.
 
 ## Type Safety
 
@@ -93,4 +105,3 @@ Install skills from this kit:
 Do not edit managed files directly. Put repo-specific notes into:
 
 - `.sddkit/fragments/AGENTS.append.md`
-

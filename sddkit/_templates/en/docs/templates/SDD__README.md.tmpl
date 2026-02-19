@@ -97,6 +97,11 @@ specs/                         # NOT managed: per-feature artifacts (created by 
 
 `AGENTS.md` is the agent context file (commands, repo map, constraints).
 
+Language policy:
+
+- `AGENTS.md` is always generated in English (single standard across repositories).
+- User-facing communication language should follow `.sddkit/config.toml` -> `[sddkit].locale`.
+
 In Spec Kit mode, `sdd-kit` does not generate it end-to-end. It is created/updated by the Spec Kit script `update-agent-context` (usually during `$speckit-plan`).
 
 To generate/update `AGENTS.md` manually (if needed):
