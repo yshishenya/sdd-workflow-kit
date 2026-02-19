@@ -127,6 +127,26 @@ This prevents “two tools fighting over the same file”.
 
 Important: do not edit `AGENTS.md` directly. In Spec Kit mode, `sdd-kit check` validates that the MANUAL block matches `.sddkit/fragments/AGENTS.manual.md`.
 
+By default, new repositories get a prefilled `.sddkit/fragments/AGENTS.manual.md` with cross-links to:
+
+- `docs/SDD/README.md` (primary workflow and command usage)
+- `meta/memory_bank/*` references (when Memory Bank is used)
+- PR/task update guidance (`workflows/code_review.md`, `guides/task_updates.md`)
+
+It also includes concise PR authoring rules by default:
+
+- target base branch
+- Conventional Commits title format
+- required PR description sections
+- required links to spec/work-item and pre-review checks
+- Markdown structure requirement for PR body (headings/bullets/checklists, not a plain-text wall)
+- ban on visible escaped line breaks in PR body (`\n`, `\r\n`, `\t`) - use real new lines
+
+For older repos:
+
+- if your fragment still has the legacy short boilerplate, `sdd-kit sync` upgrades it automatically
+- if you already edited the fragment manually, `sdd-kit` keeps your content unchanged
+
 ## Developer Workflow (Step by Step)
 
 ### SDD loop (diagram)

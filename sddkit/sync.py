@@ -344,6 +344,56 @@ def _parse_speckit_agents(raw: str) -> list[str]:
     return parts
 
 
+def _default_agents_manual_overlay(cfg: SddKitConfig) -> str:
+    docs_root = cfg.docs_root.strip("/").rstrip("/") or "docs"
+    docs_sdd = f"{docs_root}/SDD/README.md"
+    memory_bank_root = cfg.memory_bank_root.strip("/").rstrip("/") or "meta/memory_bank"
+    if cfg.integration_branch == "main":
+        pr_base_rule = "- Base branch for PRs: `main`."
+    else:
+        pr_base_rule = (
+            f"- Base branch for day-to-day work: `{cfg.integration_branch}` "
+            "(do not target `main` directly from feature branches)."
+        )
+
+    lines = [
+        "# Local additions for AGENTS.md",
+        "",
+        "## Required reading (before any task)",
+        "",
+        f"- Start with `{docs_sdd}` (canonical workflow and command usage).",
+        f"- Before PR run `python3 {cfg.github_kit_path}/bin/sdd-kit check --project .`.",
+        "",
+        "## SDD command loop",
+        "",
+        "- Use `$speckit-specify -> $speckit-plan -> $speckit-tasks -> $speckit-implement`.",
+        "- Use `$speckit-analyze` before implementation/PR when consistency checks are needed.",
+        "- Use `$speckit-planreview` after plan when you need multi-model advisory review.",
+        "",
+        "## Pull Request rules",
+        "",
+        pr_base_rule,
+        "- PR title: Conventional Commits style (example: `feat(api): add export endpoint`).",
+        "- PR body must be structured Markdown: headings + bullets/checklists (not a plain-text wall).",
+        r"- Do not paste escaped control characters as visible text in PR body (`\n`, `\r\n`, `\t`); use real line breaks.",
+        "- PR description must include: context/goal, technical changes, verification steps, risks/rollback.",
+        "- Link related artifacts: issue/ticket and spec/work-item (`specs/...` or `meta/memory_bank/specs/work_items/...`).",
+        "- Keep PR scope focused: no unrelated refactors or formatting-only noise.",
+        "- Ensure tests/lint/build pass before requesting review.",
+        "",
+        "## Memory Bank (if enabled)",
+        "",
+        f"- Read `{memory_bank_root}/README.md` and follow the Mandatory Reading Sequence.",
+        f"- If architecture/dependencies change, update `{memory_bank_root}/tech_stack.md` and relevant `patterns/*`.",
+        f"- Do not edit `{memory_bank_root}/current_tasks.md` on feature branches.",
+        f"- Write updates to `{memory_bank_root}/branch_updates/*.md`.",
+        "- On the integration branch, consolidate branch updates into `current_tasks.md` and remove processed files.",
+        f"- PR checklist: `{memory_bank_root}/workflows/code_review.md`.",
+        f"- Task update rules: `{memory_bank_root}/guides/task_updates.md`.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
 def _plan_speckit_installer(*, project_root: Path, kit_root: Path, cfg: SddKitConfig) -> list[PlanItem]:
     if not cfg.manage_speckit:
         return []
@@ -477,21 +527,34 @@ def _plan_speckit_installer(*, project_root: Path, kit_root: Path, cfg: SddKitCo
             )
             plan.append(PlannedWrite(target=overlay_target, content=overlay_prompt, reason=reason))
 
-    # Overlay fragment for AGENTS.md manual additions. This fragment is treated as user-editable;
-    # we only ensure it exists so the workflow has a stable source of truth.
-    default_overlay = (
+    # Overlay fragment for AGENTS.md manual additions. This fragment is user-editable.
+    # We seed it with cross-links and task rules, and only auto-update legacy boilerplate.
+    default_overlay = _default_agents_manual_overlay(cfg)
+    legacy_overlay = (
         "# Local additions for AGENTS.md\n"
         "\n"
         "- This block is maintained by `sdd-kit sync` (Spec Kit mode).\n"
         "- Edit this file to add repo-specific notes for your team.\n"
     )
-    plan.append(
-        PlannedEnsureExists(
-            target=project_root / ".sddkit" / "fragments" / "AGENTS.manual.md",
-            content=default_overlay,
-            reason="ensure AGENTS.md overlay fragment exists",
+    manual_target = project_root / ".sddkit" / "fragments" / "AGENTS.manual.md"
+    if manual_target.exists():
+        current = manual_target.read_text(encoding="utf-8", errors="replace")
+        if current.strip() == legacy_overlay.strip():
+            plan.append(
+                PlannedWrite(
+                    target=manual_target,
+                    content=default_overlay,
+                    reason="upgrade legacy AGENTS.manual overlay with cross-links",
+                )
+            )
+    else:
+        plan.append(
+            PlannedEnsureExists(
+                target=manual_target,
+                content=default_overlay,
+                reason="ensure AGENTS.md overlay fragment exists",
+            )
         )
-    )
 
     return plan
 

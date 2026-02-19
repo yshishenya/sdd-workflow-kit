@@ -127,6 +127,26 @@ python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
 
 Важно: не редактируйте `AGENTS.md` руками. В Spec Kit mode `sdd-kit check` проверяет, что MANUAL блок совпадает с `.sddkit/fragments/AGENTS.manual.md`.
 
+По умолчанию в новых репозиториях `.sddkit/fragments/AGENTS.manual.md` уже создается с кросс-ссылками на:
+
+- `docs/SDD/README.md` (основной workflow и команды)
+- `meta/memory_bank/*` (если Memory Bank используется)
+- правила PR/обновления задач (`workflows/code_review.md`, `guides/task_updates.md`)
+
+Также по умолчанию туда добавлены краткие правила написания PR:
+
+- целевая base-ветка
+- формат заголовка Conventional Commits
+- обязательные разделы описания PR
+- ссылки на spec/work-item и обязательные pre-review проверки
+- требование структуры Markdown для тела PR (заголовки/списки/чеклисты, а не plain text)
+- запрет на видимые escape-переносы (`\n`, `\r\n`, `\t`) в тексте PR; используйте реальные переносы строк
+
+Для старых репозиториев:
+
+- если в fragment остался legacy-короткий текст, `sdd-kit sync` обновит его автоматически
+- если fragment уже правили вручную, `sdd-kit` оставит ваш контент без перезаписи
+
 ## Как пользоваться (разработчику, по шагам)
 
 ### SDD цикл (схема)
