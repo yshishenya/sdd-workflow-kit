@@ -292,6 +292,31 @@ Modes:
 
 ---
 
+## Legacy JSON SDD (Optional)
+
+If you still use the legacy JSON-based SDD workflow (separate from Spec Kit), enable these:
+
+1. Set in `.sddkit/config.toml`:
+
+```toml
+[manage]
+meta_tools = true
+meta_sdd = true
+```
+
+2. Then run:
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit check --project .
+```
+
+Notes:
+
+- If you use Spec Kit (`--profile speckit`), you typically want `meta_*` disabled to avoid having two SDD systems in the same repo.
+
+---
+
 ## CI Drift Gate
 
 If the repo has GitHub Actions, the kit can install a workflow that runs:
