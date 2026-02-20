@@ -20,7 +20,7 @@ jobs:
       - name: Spec Kit hybrid smoke
         run: python scripts/smoke_speckit.py
 
-  airis:
+  memory-bank:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -31,5 +31,5 @@ jobs:
           python-version: "3.11"
       - name: Python syntax check
         run: python -m py_compile sddkit/*.py
-      - name: Airis profile smoke (memory_bank + meta/*)
-        run: python scripts/smoke_airis.py
+      - name: Memory Bank profile smoke
+        run: python scripts/smoke_memory_bank.py
