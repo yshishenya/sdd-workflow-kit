@@ -68,6 +68,10 @@ Profiles:
 - `generic`: minimal scaffolds (AGENTS.md, docs templates, optional CI drift gate)
 - `airis`: deprecated alias for `memory_bank` (kept for compatibility)
 
+Note:
+
+- `memory_bank` only turns on `manage.memory_bank=true` by default. Advanced scaffolds (`manage.meta_tools`, `manage.meta_sdd`, `manage.codex_scaffold`) are opt-in in `.sddkit/config.toml`.
+
 ### 3) Commit what was added
 
 `bootstrap` typically creates/updates managed files under:
@@ -267,6 +271,25 @@ What it does:
 - seeds `meta/memory_bank/*` with editable templates
 - does not overwrite existing Memory Bank content on later syncs
 
+Modes (optional):
+
+- Default is seed-only: `manage.memory_bank_mode = "seed"` (recommended; no content drift-check).
+- If you want enforcement (not recommended for most repos): set `manage.memory_bank_mode = "managed"` to make Memory Bank files kit-managed and drift-checked.
+
+---
+
+## Codex Scaffold (Optional)
+
+If you want a repo-local Codex environment scaffold under `.codex/`:
+
+1. Set `manage.codex_scaffold = true` in `.sddkit/config.toml`
+2. Run `python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .`
+
+Modes:
+
+- Default is seed-only: `manage.codex_scaffold_mode = "seed"`
+- Set `manage.codex_scaffold_mode = "managed"` only if you want drift-check enforcement
+
 ---
 
 ## CI Drift Gate
@@ -349,4 +372,3 @@ The correct flow is “script-first”.
 
 - Run `sdd-kit sync` to ensure you have the latest skill templates.
 - Restart Codex / start a new chat if the UI caches skills.
-

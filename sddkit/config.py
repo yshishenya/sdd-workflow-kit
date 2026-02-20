@@ -35,9 +35,11 @@ class SddKitConfig:
     manage_specs_scaffold: bool = True
     manage_speckit: bool = False
     manage_memory_bank: bool = False
+    memory_bank_mode: str = "seed"  # seed|managed
     manage_meta_tools: bool = False
     manage_meta_sdd: bool = False
     manage_codex_scaffold: bool = False
+    codex_scaffold_mode: str = "seed"  # seed|managed
 
     skills_default_pack: str = "codex"
     skills_default_install_to: str = "project"  # project|global
@@ -70,6 +72,12 @@ def load_config(config_path: Path | None) -> SddKitConfig:
     raw_profile = str(_deep_get(raw, "sddkit.profile", DEFAULT_CONFIG.profile))
     if raw_profile == "airis":
         raw_profile = "memory_bank"
+    raw_memory_bank_mode = str(_deep_get(raw, "manage.memory_bank_mode", DEFAULT_CONFIG.memory_bank_mode)).strip()
+    if raw_memory_bank_mode not in {"seed", "managed"}:
+        raw_memory_bank_mode = DEFAULT_CONFIG.memory_bank_mode
+    raw_codex_scaffold_mode = str(_deep_get(raw, "manage.codex_scaffold_mode", DEFAULT_CONFIG.codex_scaffold_mode)).strip()
+    if raw_codex_scaffold_mode not in {"seed", "managed"}:
+        raw_codex_scaffold_mode = DEFAULT_CONFIG.codex_scaffold_mode
 
     cfg = SddKitConfig(
         locale=str(_deep_get(raw, "sddkit.locale", DEFAULT_CONFIG.locale)),
@@ -91,9 +99,11 @@ def load_config(config_path: Path | None) -> SddKitConfig:
         manage_specs_scaffold=bool(_deep_get(raw, "manage.specs_scaffold", DEFAULT_CONFIG.manage_specs_scaffold)),
         manage_speckit=bool(_deep_get(raw, "manage.speckit", DEFAULT_CONFIG.manage_speckit)),
         manage_memory_bank=bool(_deep_get(raw, "manage.memory_bank", DEFAULT_CONFIG.manage_memory_bank)),
+        memory_bank_mode=raw_memory_bank_mode,
         manage_meta_tools=bool(_deep_get(raw, "manage.meta_tools", DEFAULT_CONFIG.manage_meta_tools)),
         manage_meta_sdd=bool(_deep_get(raw, "manage.meta_sdd", DEFAULT_CONFIG.manage_meta_sdd)),
         manage_codex_scaffold=bool(_deep_get(raw, "manage.codex_scaffold", DEFAULT_CONFIG.manage_codex_scaffold)),
+        codex_scaffold_mode=raw_codex_scaffold_mode,
         skills_default_pack=str(_deep_get(raw, "skills.default_pack", DEFAULT_CONFIG.skills_default_pack)),
         skills_default_install_to=str(_deep_get(raw, "skills.default_install_to", DEFAULT_CONFIG.skills_default_install_to)),
         github_kit_path=str(_deep_get(raw, "github.kit_path", DEFAULT_CONFIG.github_kit_path)),
@@ -126,9 +136,11 @@ def write_default_config(
     manage_agents_md = "false" if profile == "speckit" else "true"
     manage_speckit = "true" if profile == "speckit" else "false"
     manage_memory_bank = "true" if profile == "memory_bank" else "false"
+    memory_bank_mode = '"seed"'
     manage_meta_tools = "false"
     manage_meta_sdd = "false"
     manage_codex_scaffold = "false"
+    codex_scaffold_mode = '"seed"'
 
     # In speckit mode we avoid the legacy lifecycle layout (`specs/{pending,active,completed}`).
     manage_docs_scaffold = "true"
@@ -159,9 +171,11 @@ docs_scaffold = {manage_docs_scaffold}
 specs_scaffold = {manage_specs_scaffold}
 speckit = {manage_speckit}
 memory_bank = {manage_memory_bank}
+memory_bank_mode = {memory_bank_mode}
 meta_tools = {manage_meta_tools}
 meta_sdd = {manage_meta_sdd}
 codex_scaffold = {manage_codex_scaffold}
+codex_scaffold_mode = {codex_scaffold_mode}
 
 [speckit]
 agent = "codex"
