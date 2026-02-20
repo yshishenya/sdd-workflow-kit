@@ -1,52 +1,19 @@
-# Refactoring Process
+# Workflow: Refactoring
 
-## 1. Preparation
+Goal: improve structure without changing behaviour.
 
-- [ ] Define the refactoring goal and non-goals
-- [ ] Identify what must NOT change (public behavior, API contracts, data model)
-- [ ] Create a branch from the integration branch `{{integration_branch}}` (do not branch from `main`):
-  - `refactor/short-description` or `codex/refactor/short-description`
-- [ ] Log task update per **[../guides/task_updates.md](../guides/task_updates.md)**
-- [ ] For non-trivial refactors:
-  - Create a **work item spec** in `../specs/work_items/` (see `../specs/README.md`) and reference it from your branch update entry
-  - Create an SDD spec (JSON) under `{{meta_sdd_root}}/specs/{pending,active,completed}/` and cross-link it from the work item spec
-    (and set `metadata.work_item_spec` in the SDD spec to point back)
+---
 
-## 2. Safety Net
+## Checklist
 
-- [ ] Ensure relevant tests exist before refactoring
-- [ ] If missing, add tests first (or include as the first commit)
+- [ ] Define the intent and scope (what will improve, what won’t change).
+- [ ] Identify risk areas and add characterization tests if needed.
+- [ ] Refactor in small steps.
+- [ ] Avoid mixed changes (no feature work inside refactor PRs).
 
-## 3. Refactor Incrementally
+## Validate
 
-- [ ] Small steps with frequent local verification
-- [ ] Prefer mechanical refactors (rename, extract, move) before logic changes
-- [ ] Run relevant tests before each commit (or at least after each meaningful step)
-- [ ] Keep diffs reviewable
+- [ ] Format: `{{format_cmd}}`
+- [ ] Lint: `{{lint_cmd}}`
+- [ ] Test: `{{test_cmd}}`
 
-## 4. Verification
-
-- [ ] Run tests via Docker Compose (see **[testing strategy](../guides/testing_strategy.md)**)
-
-## 5. Code Quality
-
-- [ ] Backend formatting: `docker compose -f docker-compose.yaml -f docker-compose.dev.yaml run --rm airis bash -lc "black ."`
-- [ ] Backend linting (ruff): use Codex Action `ruff (docker)` or run `docker compose -f docker-compose.yaml -f docker-compose.dev.yaml -f .codex/docker-compose.codex.yaml run --rm --no-deps pytools "python -m pip install -U pip >/dev/null && python -m pip install -q 'ruff>=0.1' && ruff check backend"`
-- [ ] Frontend formatting: `docker compose -f docker-compose.yaml -f docker-compose.dev.yaml run --rm --no-deps airis-frontend sh -lc "npm run format"`
-- [ ] Frontend lint/typecheck: `docker compose -f docker-compose.yaml -f docker-compose.dev.yaml run --rm --no-deps airis-frontend sh -lc "npm run lint:frontend && npm run check"`
-
-## 6. Documentation
-
-- [ ] Update docs if you changed structure, patterns, or dev commands
-
-## 7. Completion
-
-- [ ] Log task status update per **[../guides/task_updates.md](../guides/task_updates.md)** to "Done"
-- [ ] Use detailed commit message template from **[../guides/commit_messages.md](../guides/commit_messages.md)**
-- [ ] Create commit(s) with Conventional Commits messages (`refactor: ...`)
-- [ ] Push the branch: `git push -u origin refactor/short-description`
-- [ ] Open a PR with:
-  - Target branch: `{{integration_branch}}` (do not open direct PRs to `main`)
-  - Motivation (why refactor)
-  - Scope (what changed)
-  - Proof behavior is unchanged (tests + any manual checks)

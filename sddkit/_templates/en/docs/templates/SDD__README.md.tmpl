@@ -130,7 +130,12 @@ python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
 
 This prevents “two tools fighting over the same file”.
 
-Important: do not edit `AGENTS.md` directly. In Spec Kit mode, `sdd-kit check` validates that the MANUAL block matches `.sddkit/fragments/AGENTS.manual.md`.
+Important: do not edit `AGENTS.md` directly. In Spec Kit mode, the MANUAL block is composed of:
+
+- an auto-generated section derived from repo structure/docs (written by `sdd-kit sync`)
+- a team-owned section sourced from `.sddkit/fragments/AGENTS.manual.md`
+
+`sdd-kit check` validates that the MANUAL block matches the expected composition.
 
 By default, new repositories get a prefilled `.sddkit/fragments/AGENTS.manual.md` with cross-links to:
 

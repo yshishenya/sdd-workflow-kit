@@ -1,50 +1,18 @@
-# Specs (Memory Bank)
+# Memory Bank Specs (Optional)
 
-This folder contains **design docs** and **work item specs**.
-
-## Goals
-
-- Keep the “what/why/how/verify” of changes written down in one place.
-- Avoid merge conflicts when working in multiple branches/worktrees.
-- Make `current_tasks.md` entries link to the canonical spec.
-
-## Two kinds of docs
-
-### 1) Work item specs (preferred for day-to-day work)
-
-- **Use when**: implementing a feature/bugfix/refactor that is more than a trivial one-liner.
-- **Location**: `meta/memory_bank/specs/work_items/`
-- **Conflict rule**: create a **new file per work item** (don’t reuse/overwrite a shared “plan” doc).
-- **Lifecycle**:
-  - Draft/Active: update freely while on the same branch.
-  - Done: mark as Done and avoid further edits; follow-ups get a new work item spec.
-- **SDD (for non-trivial work)**: create an SDD spec JSON under `{{meta_sdd_root}}/specs/{pending,active,completed}/` (use the wrapper: `{{meta_tools_root}}/sdd ...`).
-- **Cross-link**: link MD <-> JSON (`SDD Spec:` in the work item spec, and `metadata.work_item_spec` in the SDD spec).
-
-**Naming**
-
-Use a unique name to minimize collisions:
-
-```
-YYYY-MM-DD__<type>__<slug>.md
-```
+This folder can host lightweight specs that are *not* part of the main SDD pipeline.
 
 Examples:
 
-- `2026-02-03__bugfix__docker-compose-test-commands.md`
-- `2026-02-03__feature__billing-auto-topup-ui.md`
-- `2026-02-03__refactor__billing-wallet-service-split.md`
+- operational runbooks
+- migration notes
+- internal “work item” specs
 
-### 2) Plans / strategy docs (use sparingly)
+If this repository uses Spec Kit, feature specs should live under the repo root:
 
-Existing files in `meta/memory_bank/specs/` (without `work_items/`) are often broader plans.
-They are more likely to be touched by multiple branches and cause conflicts.
+- `specs/###-feature-name/`
 
-Guideline:
+If you prefer work-item specs inside the Memory Bank, use:
 
-- Prefer to **add a new work item spec** that references a plan, instead of editing the plan from multiple feature branches/worktrees.
-- If a plan must change, do it on the integration branch (or in a dedicated docs branch that is coordinated), and keep the edit narrowly scoped.
+- `./work_items/`
 
-## Template
-
-Use `meta/memory_bank/specs/work_items/_template.md` as a starting point.

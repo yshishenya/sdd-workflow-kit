@@ -1,41 +1,30 @@
-# Branch Updates Template (Worktree-safe)
+# Branch Update (Template)
 
-Use this template for files under:
+> Copy this file into `meta/memory_bank/branch_updates/<branch-name>.md` (or similar) and append updates as you work.
 
-```
-meta/memory_bank/branch_updates/<YYYY-MM-DD>-<branch-slug>.md
-```
+## Summary
 
-Branch slug rule: replace `/` with `-` (example: `feature/billing-wallet` → `feature-billing-wallet`).
+- Branch: `<branch-name>`
+- Date: `<YYYY-MM-DD>`
+- Work item/spec: `<link>`
 
-## Rules
+## What changed (high level)
 
-- Do **not** edit `meta/memory_bank/current_tasks.md` on non-integration branches.
-- Every entry **must** include `Spec: <path>` pointing to a work item spec in `meta/memory_bank/specs/work_items/`.
-- Keep entries short; details live in the work item spec.
-- Use absolute dates: `YYYY-MM-DD`.
+- `<bullet>`
+- `<bullet>`
 
-## Template
+## Decisions / Notes
 
-### In progress
+- `<bullet>`
 
-- [ ] **[<TAG>]** <Short title>
-  - Spec: `meta/memory_bank/specs/work_items/<YYYY-MM-DD>__<type>__<slug>.md`
-  - Owner: <name/agent>
-  - Branch: `<branch-name>`
-  - Started: <YYYY-MM-DD>
-  - Summary: <1–2 lines describing the outcome>
-  - Tests: <what was run, or "N/A (docs-only)">
-  - Risks: <1 line, or "N/A">
+## Validation
 
-### Done
+- Commands run:
+  - `<command>`
+- Results:
+  - `<bullet>`
 
-- [x] **[<TAG>]** <Short title>
-  - Spec: `meta/memory_bank/specs/work_items/<YYYY-MM-DD>__<type>__<slug>.md`
-  - Owner: <name/agent>
-  - Branch: `<branch-name>`
-  - Done: <YYYY-MM-DD>
-  - Summary: <1–2 lines describing what shipped>
-  - Tests: <what was run, or "N/A (docs-only)">
-  - Risks: <1 line, or "N/A">
+## Next steps
+
+- `<bullet>`
 

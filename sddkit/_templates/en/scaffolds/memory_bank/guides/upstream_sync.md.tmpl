@@ -1,43 +1,37 @@
-# Upstream Sync (Open WebUI) — Conflict-Minimizing Rules
+# Upstream Sync (Fork Discipline)
 
-Airis is a fork of Open WebUI. We periodically integrate upstream changes. This guide describes how to keep the fork easy to rebase/merge.
+If this repository is a fork, use this guide to keep upstream integration low-drama.
+
+Goal: keep the diff small, keep changes isolated, and make updates reproducible.
+
+---
 
 ## Principles
 
-1. **Keep diffs small**: the fewer lines we touch in upstream-owned files, the fewer conflicts during updates.
-2. **Prefer additive**: add new files/modules rather than editing existing upstream files.
-3. **Thin hooks**: when upstream files must change, keep them as a thin wrapper that delegates to fork-owned code.
-4. **No formatting churn** in upstream-owned files (avoid “drive-by” cleanup).
+- Prefer additive changes (new files/modules) over editing upstream-owned files.
+- When editing upstream-owned files is unavoidable:
+  - keep diffs minimal
+  - avoid formatting churn
+  - document the reason and impact in the PR
+- Separate “upstream sync” PRs from “feature work” PRs.
 
-## “Fork-owned” vs “Upstream-owned”
+---
 
-Practical rule of thumb:
+## Suggested structure for fork-owned changes
 
-- Fork-owned (safe to change freely): `meta/memory_bank/**`, `.codex/**`, new `src/lib/utils/airis/**` modules, and other clearly Airis-specific additions.
-- Upstream-owned (treat as stable surface): most existing app/runtime code under `backend/` and `src/` unless explicitly introduced for Airis.
+- Put fork-specific logic in clearly namespaced modules/directories.
+- Keep patches close to integration points (thin adapters/hooks).
 
-When in doubt: assume a file is upstream-owned and minimize edits.
+---
 
-## Required documentation for non-trivial changes
+## Update procedure (high level)
 
-For every non-trivial work item:
-
-- Create a work item spec: `meta/memory_bank/specs/work_items/YYYY-MM-DD__<type>__<slug>.md`
-- Include an **Upstream impact** section:
-  - list upstream-owned files touched
-  - why it was necessary (no extension point / missing hook)
-  - how the change was minimized (thin hook, additive helper, guarded behavior)
-
-## Recommended structure for minimizing upstream conflicts
-
-- Frontend: isolate fork logic in `src/lib/utils/airis/*` (or other clearly Airis-namespaced modules) and keep upstream components as callers.
-- Backend: prefer small helpers in `backend/open_webui/utils/` (create `backend/open_webui/utils/airis/` when it helps isolate functionality).
-
-## Operational workflow for upstream updates (high-level)
-
-1. Do upstream sync work on a dedicated branch (from integration branch), e.g. `chore/upstream-sync-YYYY-MM-DD`.
-2. Integrate upstream changes (merge or rebase per team policy).
-3. Resolve conflicts by preserving upstream intent and re-applying Airis changes via thin hooks where possible.
-4. Run the fastest meaningful verification (Docker Compose-first).
-5. Record a short entry in `meta/memory_bank/current_tasks.md` describing the sync and any high-risk conflict resolutions.
+1. Create a dedicated branch: `chore/upstream-sync-<date>`
+2. Merge or rebase upstream changes
+3. Resolve conflicts by preserving upstream intent first, then re-applying local hooks
+4. Run full test suite
+5. Open a PR with:
+   - upstream version/commit
+   - summary of conflicts and resolutions
+   - risk and rollback plan
 
