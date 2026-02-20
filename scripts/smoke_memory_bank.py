@@ -10,28 +10,22 @@ from pathlib import Path
 
 
 def run(cmd: list[str], *, cwd: Path) -> None:
-    """Execute a command in a specified directory."""
     print("+", " ".join(cmd))
     subprocess.run(cmd, cwd=str(cwd), check=True)
 
 
 def main() -> int:
-    """Run the main process for bootstrapping the Airis profile.
-    
-    This function initializes a temporary Git repository, configures it,  and adds
-    the sdd-workflow-kit as a submodule. It then bootstraps the  project using the
-    specified Airis profile and checks for required files.  If any expected files
-    are missing or if the necessary executables are  not set, it raises an error.
-    The temporary directory can be kept for  debugging based on the command-line
-    argument provided.
-    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--keep", action="store_true", help="Keep the temporary repo directory on success/failure")
     ns = ap.parse_args()
 
     kit_root = Path(__file__).resolve().parents[1]
+    kit_sha = (
+        subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(kit_root), check=True, capture_output=True, text=True)
+        .stdout.strip()
+    )
 
-    tmp_root = Path(tempfile.mkdtemp(prefix="sddkit-airis-smoke-"))
+    tmp_root = Path(tempfile.mkdtemp(prefix="sddkit-memory-bank-smoke-"))
     repo = tmp_root / "repo"
     repo.mkdir(parents=True, exist_ok=True)
 
@@ -56,10 +50,12 @@ def main() -> int:
         run(["git", "commit", "-m", "Add sdd-workflow-kit submodule"], cwd=repo)
         run(["git", "submodule", "update", "--init", "--recursive"], cwd=repo)
 
+        # Ensure the submodule checkout matches this working tree's HEAD (so the smoke test
+        # can validate unmerged changes on a feature branch).
+        run(["git", "checkout", kit_sha], cwd=repo / ".tooling" / "sdd-workflow-kit")
+
         project_cli = repo / ".tooling" / "sdd-workflow-kit" / "bin" / "sdd-kit"
 
-        # Airis profile = memory_bank + meta tools + meta/sdd + codex scaffolds + AGENTS.md.
-        # Use ru locale to verify fallback-to-en for scaffolds that are not translated.
         run(
             [
                 sys.executable,
@@ -68,9 +64,9 @@ def main() -> int:
                 "--project",
                 ".",
                 "--profile",
-                "airis",
+                "memory_bank",
                 "--locale",
-                "ru",
+                "en",
             ],
             cwd=repo,
         )
@@ -80,19 +76,13 @@ def main() -> int:
             repo / "AGENTS.md",
             repo / "meta" / "memory_bank" / "README.md",
             repo / "meta" / "memory_bank" / "tech_stack.md",
-            repo / "meta" / "tools" / "sdd",
-            repo / "meta" / "sdd" / "README.md",
-            repo / ".codex" / "environments" / "environment.toml",
+            repo / "meta" / "memory_bank" / "current_tasks.md",
         ]
         missing = [p for p in required if not p.exists()]
         if missing:
             raise RuntimeError("Missing expected files:\n" + "\n".join(str(p) for p in missing))
 
-        # The meta/tools/sdd wrapper should be executable.
-        if not (repo / "meta" / "tools" / "sdd").stat().st_mode & 0o111:
-            raise RuntimeError("Expected meta/tools/sdd to be executable")
-
-        print("OK: Airis profile (memory_bank + meta/*) bootstrap + drift check")
+        print("OK: memory_bank profile bootstrap + drift check")
         if ns.keep:
             print(f"Kept: {tmp_root}")
         else:
@@ -109,4 +99,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -21,9 +21,9 @@ Steps:
    - `python3 .tooling/sdd-workflow-kit/bin/sdd-kit bootstrap --project .`
 
 3. Open `.sddkit/config.toml` and confirm:
-   - `[sddkit] profile` (`generic` or `airis`)
+   - `[sddkit] profile` (`generic`, `memory_bank`, or `speckit`)
    - `[project] name` and `integration_branch`
-   - `[manage]` toggles (memory_bank/meta_sdd/meta_tools/docs/specs)
+   - `[manage]` toggles (speckit/memory_bank/docs/specs, plus optional meta_* / codex_scaffold)
    - `[github] kit_path` matches `.tooling/sdd-workflow-kit`
 
 4. Apply sync again (idempotent):
@@ -47,4 +47,3 @@ If conflicts appear:
 
 - Do not overwrite. Disable the conflicting manager in `.sddkit/config.toml` or move the kit-managed path.
 - Use `.sddkit/fragments/AGENTS.append.md` to add local agent notes without editing the managed `AGENTS.md`.
-

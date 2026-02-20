@@ -50,13 +50,14 @@ def detect_project(project_root: Path) -> dict[str, str]:
     has_meta_memory_bank = _exists(project_root, "meta/memory_bank/README.md")
     has_meta_sdd = _exists(project_root, "meta/sdd/README.md") or _exists(project_root, "meta/sdd/specs")
     has_meta_tools = _exists(project_root, "meta/tools")
+    has_speckit = _exists(project_root, ".specify/scripts") or _exists(project_root, ".specify/templates")
 
     langs = sorted(set(languages))
     recommended_profile = "generic"
-    if has_meta_memory_bank or has_meta_sdd or has_meta_tools:
-        recommended_profile = "airis"
-    # Only auto-select "airis" when the repo already contains Airis/MemoryBank markers.
-    # Avoid surprising scaffolding in arbitrary full-stack repos.
+    if has_speckit:
+        recommended_profile = "speckit"
+    elif has_meta_memory_bank or has_meta_sdd or has_meta_tools:
+        recommended_profile = "memory_bank"
 
     return {
         "languages": ",".join(langs),
@@ -66,5 +67,6 @@ def detect_project(project_root: Path) -> dict[str, str]:
         "has_meta_memory_bank": "true" if has_meta_memory_bank else "false",
         "has_meta_sdd": "true" if has_meta_sdd else "false",
         "has_meta_tools": "true" if has_meta_tools else "false",
+        "has_speckit": "true" if has_speckit else "false",
         "recommended_profile": recommended_profile,
     }

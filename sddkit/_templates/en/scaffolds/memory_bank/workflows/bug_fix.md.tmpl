@@ -1,144 +1,31 @@
-# Bug Fix Process
+# Workflow: Bug Fix
 
-## 1. Preparation and Analysis
+---
 
-### 1.1 Git Branch Setup
+## 1) Reproduce
 
-- [ ] Create a branch from the integration branch `{{integration_branch}}` (do not branch from `main`) following one of:
-  - `bugfix/short-description`
-  - `codex/bugfix/short-description`
-  - Example: `bugfix/fix-billing-dashboard-spinner`
-  - Follow the convention from [../tech_stack.md](../tech_stack.md#version-control)
+- [ ] Confirm the bug exists in the target environment/version.
+- [ ] Capture reproduction steps and expected vs actual behaviour.
+- [ ] Add logs/screenshots if relevant.
 
-### 1.2 Task Tracking
+## 2) Diagnose
 
-- [ ] Log task status update per **[../guides/task_updates.md](../guides/task_updates.md)** to "In Progress"
-- [ ] Add `[BUG]` label to the task for visual distinction
+- [ ] Identify root cause (not just symptoms).
+- [ ] Determine blast radius (where else it may occur).
 
-### 1.2.1 Work Item Spec (recommended)
+## 3) Fix
 
-- [ ] For non-trivial bugs:
-  - Create a **work item spec** in `../specs/work_items/` (see `../specs/README.md`) and reference it from your branch update entry
-  - Create an SDD spec (JSON) under `{{meta_sdd_root}}/specs/{pending,active,completed}/` and cross-link it from the work item spec
-    (and set `metadata.work_item_spec` in the SDD spec to point back)
+- [ ] Implement the smallest safe fix.
+- [ ] Add a regression test if practical.
 
-### 1.3 Bug Analysis
+## 4) Validate
 
-- [ ] Study the bug description and reproduce the problem
-- [ ] Gather all available information:
-  - Error logs
-  - Reproduction steps
-  - Expected vs. actual behavior
-  - Environment information (Python/Node versions, dependencies)
-- [ ] Generate hypotheses about the bug causes:
-  - Logical errors in code
-  - Concurrency issues (race conditions, deadlocks)
-  - Incorrect edge case handling
-  - Issues with external APIs
+- [ ] Format: `{{format_cmd}}`
+- [ ] Lint: `{{lint_cmd}}`
+- [ ] Test: `{{test_cmd}}`
 
-### 1.4 Code Localization
+## 5) PR
 
-- [ ] Localize the problem in the codebase
-- [ ] Find all relevant files:
-  - Module(s) with the bug
-  - Dependent modules
-  - Tests for affected modules
-- [ ] Review relevant documents:
-  - **[../guides/](../guides/)** - for understanding the subsystem
-  - **[../patterns/error_handling.md](../patterns/error_handling.md)** - error handling conventions
-  - **[../patterns/api_standards.md](../patterns/api_standards.md)** - API conventions
+- [ ] Include: root cause, fix summary, verification steps.
+- [ ] Note risk and rollback.
 
-## 2. Development
-
-### 2.1 Write Fix
-
-- [ ] Make fixes following **[coding standards](../guides/coding_standards.md)**:
-  - Type hints for new/modified functions
-  - Docstrings where the public behavior changes
-  - Proper error handling per **[../patterns/error_handling.md](../patterns/error_handling.md)**
-  - For async code - verify no blocking operations
-- [ ] Add logging where it improves debugging (avoid secrets/PII)
-- [ ] Ensure the fix addresses the root cause, not just the symptom
-
-### 2.2 Code Review Self-Check
-
-- [ ] Verify that the fix:
-  - Is minimal - doesn't change more than necessary
-  - Doesn't create new bugs in adjacent areas
-  - Doesn't break existing API contracts
-  - Follows project architectural patterns
-
-## 3. Testing
-
-### 3.1 Add/Update Tests
-
-- [ ] Write a test that reproduces the bug (should fail before the fix)
-- [ ] Ensure the test passes after the fix
-- [ ] Add edge case tests to prevent regression
-- [ ] Follow the **[testing strategy](../guides/testing_strategy.md)**
-
-### 3.2 Run Test Suites
-
-- [ ] Run tests via Docker Compose (see **[testing strategy](../guides/testing_strategy.md)**)
-
-### 3.3 Manual Testing
-
-- [ ] Test the fix manually in development environment
-- [ ] Reproduce the original problem and ensure it's resolved
-- [ ] Check edge cases
-
-## 4. Code Quality
-
-### 4.1 Linting and Formatting
-
-- [ ] Backend formatting: `docker compose -f docker-compose.yaml -f docker-compose.dev.yaml run --rm airis bash -lc "black ."`
-- [ ] Backend linting (ruff): use Codex Action `ruff (docker)` or run `docker compose -f docker-compose.yaml -f docker-compose.dev.yaml -f .codex/docker-compose.codex.yaml run --rm --no-deps pytools "python -m pip install -U pip >/dev/null && python -m pip install -q 'ruff>=0.1' && ruff check backend"`
-- [ ] Frontend formatting: `docker compose -f docker-compose.yaml -f docker-compose.dev.yaml run --rm --no-deps airis-frontend sh -lc "npm run format"`
-- [ ] Frontend lint/typecheck: `docker compose -f docker-compose.yaml -f docker-compose.dev.yaml run --rm --no-deps airis-frontend sh -lc "npm run lint:frontend && npm run check"`
-
-Note: `mypy`/`ruff` may be used ad-hoc where configured, but are not wired as required project commands.
-
-### 4.2 Security Check
-
-- [ ] Ensure the fix doesn't introduce:
-  - Secret leaks in logs
-  - Unsafe deserialization
-  - Issues with async resource management
-
-## 5. Documentation
-
-### 5.1 Code Documentation
-
-- [ ] Update docstrings if behavior has changed
-- [ ] Add comments for non-obvious fix logic (explain WHY)
-
-### 5.2 Update Related Docs
-
-- [ ] Update **[../guides/](../guides/)** if the bug revealed a documentation gap
-- [ ] Update **[../patterns/](../patterns/)** if a new pattern needs to be documented
-- [ ] Update **[../tech_stack.md](../tech_stack.md)** if versions/commands changed
-
-## 6. Completion
-
-### 6.1 Task Status Update
-
-- [ ] Log task status update per **[../guides/task_updates.md](../guides/task_updates.md)** to "Done"
-- [ ] Add a brief description of the solution to the task
-
-### 6.2 Commit and Push
-
-- [ ] Use detailed commit message template from **[../guides/commit_messages.md](../guides/commit_messages.md)**
-- [ ] Create a commit with a meaningful message (Conventional Commits):
-  - `fix: ...`
-  - `docs: ...`
-- [ ] Push the branch: `git push -u origin bugfix/short-description`
-
-### 6.3 Pull Request
-
-- [ ] Create a Pull Request with description:
-  - Target branch: `{{integration_branch}}` (do not open direct PRs to `main`)
-  - Bug description
-  - Root cause
-  - Solution
-  - Testing steps
-  - Side effects

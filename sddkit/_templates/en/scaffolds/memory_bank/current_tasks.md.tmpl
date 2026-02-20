@@ -1,35 +1,29 @@
-# Current Tasks
+# Current Tasks (Integration Branch Only)
 
-This file tracks shared team work at a high level.
+This is the shared, merge-conflict-prone task list. To keep merges clean:
 
-Conflict rule:
+- Do **not** edit this file on feature branches.
+- Use `./branch_updates/*.md` on feature branches.
+- On the integration branch, consolidate updates into this file and delete processed `branch_updates/*`.
 
-- On feature/bugfix/refactor/docs branches, do **not** edit this file.
-- Instead, use:
-  - Work item spec: `{{memory_bank_root}}/specs/work_items/YYYY-MM-DD__<type>__<slug>.md`
-  - Branch update log: `{{memory_bank_root}}/branch_updates/YYYY-MM-DD-<branch-slug>.md`
-- Consolidate into this file only on the integration branch: `{{integration_branch}}`.
+Detailed rules:
 
-## In Progress
+- `./guides/task_updates.md`
 
-- [ ] <Task title>
-  - Spec: <path>
-  - Owner: <name>
-  - Started: <YYYY-MM-DD>
-  - Summary: <1-3 lines>
+---
 
-## To Do
+## Active Work Items
 
-- [ ] <Task title>
-  - Spec: <path>
-  - Owner: <name>
-  - Summary: <1-3 lines>
+Use one section per work item or feature.
 
-## Done
+### <Work item title>
 
-- [x] <Task title>
-  - Spec: <path>
-  - Owner: <name>
-  - Done: <YYYY-MM-DD>
-  - Summary: <1-3 lines>
+- Owner: `<name>`
+- Branch: `<branch-name>`
+- Status: `<planned|in-progress|blocked|done>`
+- Links:
+  - Spec: `<spec link>`
+  - PR: `<pr link>`
+- Notes:
+  - `<short bullets>`
 

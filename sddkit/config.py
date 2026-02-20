@@ -15,11 +15,12 @@ except Exception:  # pragma: no cover
 class SddKitConfig:
     locale: str = "en"
     safe_mode: bool = True
-    profile: str = "auto"  # auto|generic|airis|speckit
+    # NOTE: "airis" is a deprecated alias for "memory_bank" kept for backward compatibility.
+    profile: str = "auto"  # auto|generic|memory_bank|speckit
     project_name: str = "Project"
     integration_branch: str = "main"
     is_fork: bool = False
-    upstream_project: str = "Open WebUI"
+    upstream_project: str = "Upstream"
 
     docs_root: str = "docs"
     specs_root: str = "specs"
@@ -66,11 +67,14 @@ def load_config(config_path: Path | None) -> SddKitConfig:
     if tomllib is None:
         raise RuntimeError("tomllib is not available; use Python 3.11+ or switch config format.")
     raw = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    raw_profile = str(_deep_get(raw, "sddkit.profile", DEFAULT_CONFIG.profile))
+    if raw_profile == "airis":
+        raw_profile = "memory_bank"
 
     cfg = SddKitConfig(
         locale=str(_deep_get(raw, "sddkit.locale", DEFAULT_CONFIG.locale)),
         safe_mode=bool(_deep_get(raw, "sddkit.safe_mode", DEFAULT_CONFIG.safe_mode)),
-        profile=str(_deep_get(raw, "sddkit.profile", DEFAULT_CONFIG.profile)),
+        profile=raw_profile,
         project_name=str(_deep_get(raw, "project.name", DEFAULT_CONFIG.project_name)),
         integration_branch=str(_deep_get(raw, "project.integration_branch", DEFAULT_CONFIG.integration_branch)),
         is_fork=bool(_deep_get(raw, "project.is_fork", DEFAULT_CONFIG.is_fork)),
@@ -115,19 +119,20 @@ def write_default_config(
     project_name = project_root.name
     detected_profile = str(detection.get("recommended_profile") or "generic")
     profile = profile_override if profile_override and profile_override != "auto" else detected_profile
-    integration_branch = "airis_b2c" if profile == "airis" else "main"
+    if profile == "airis":
+        profile = "memory_bank"
+    integration_branch = "main"
 
     manage_agents_md = "false" if profile == "speckit" else "true"
     manage_speckit = "true" if profile == "speckit" else "false"
-    manage_memory_bank = "true" if profile == "airis" else "false"
-    manage_meta_tools = "true" if profile == "airis" else "false"
-    manage_meta_sdd = "true" if profile == "airis" else "false"
-    manage_codex_scaffold = "true" if profile == "airis" else "false"
+    manage_memory_bank = "true" if profile == "memory_bank" else "false"
+    manage_meta_tools = "false"
+    manage_meta_sdd = "false"
+    manage_codex_scaffold = "false"
 
     # In speckit mode we avoid the legacy lifecycle layout (`specs/{pending,active,completed}`).
-    # Docs scaffolds stay enabled (generic defaults) unless the airis profile is selected.
-    manage_docs_scaffold = "false" if profile == "airis" else "true"
-    manage_specs_scaffold = "false" if profile in {"airis", "speckit"} else "true"
+    manage_docs_scaffold = "true"
+    manage_specs_scaffold = "false" if profile == "speckit" else "true"
     content = f"""[sddkit]
 locale = "{locale}"
 safe_mode = true
@@ -137,7 +142,7 @@ profile = "{profile}"
 name = "{project_name}"
 integration_branch = "{integration_branch}"
 is_fork = false
-upstream_project = "Open WebUI"
+upstream_project = "Upstream"
 
 [paths]
 docs_root = "docs"

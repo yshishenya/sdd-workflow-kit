@@ -29,8 +29,8 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     p_bootstrap.add_argument(
         "--profile",
         default="auto",
-        choices=["auto", "generic", "airis", "speckit"],
-        help="Config preset (auto/generic/airis/speckit). Used only when creating a new config.",
+        choices=["auto", "generic", "memory_bank", "speckit", "airis"],
+        help="Config preset (auto/generic/memory_bank/speckit). 'airis' is a deprecated alias for 'memory_bank'. Used only when creating a new config.",
     )
 
     p_sync = sub.add_parser("sync", parents=[common], help="Sync managed files (safe, idempotent)")
@@ -75,6 +75,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if ns.cmd == "bootstrap":
+        if ns.profile == "airis":
+            print("WARNING: profile 'airis' is deprecated; use '--profile memory_bank'.")
         if not config_path.exists():
             detection = detect_project(project_root)
             write_default_config(

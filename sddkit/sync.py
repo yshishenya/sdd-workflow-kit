@@ -150,10 +150,188 @@ def _infer_commands(detection: dict[str, str]) -> dict[str, str]:
     }
 
 
+_DEFAULT_REPO_DIR_IGNORES = {
+    ".git",
+    ".github",
+    ".tooling",
+    ".sddkit",
+    ".specify",
+    ".codex",
+    "node_modules",
+    "dist",
+    "build",
+    "out",
+    "target",
+    "vendor",
+    "__pycache__",
+    ".venv",
+    "venv",
+    ".pytest_cache",
+}
+
+
+def _discover_top_level_dirs(project_root: Path, cfg: SddKitConfig | None = None) -> list[str]:
+    out: list[str] = []
+    try:
+        for p in project_root.iterdir():
+            if not p.is_dir():
+                continue
+            name = p.name
+            if name in _DEFAULT_REPO_DIR_IGNORES:
+                continue
+            if name.startswith("."):
+                continue
+            out.append(name)
+    except Exception:
+        return []
+
+    # Include directories that are expected to exist after `sync` based on config,
+    # so AGENTS.md is deterministic on first bootstrap (before scaffolds exist).
+    if cfg is not None:
+        if cfg.manage_docs_scaffold:
+            docs_root = (cfg.docs_root.strip("/").rstrip("/") or "docs").split("/", 1)[0]
+            out.append(docs_root)
+        if cfg.manage_specs_scaffold:
+            specs_root = (cfg.specs_root.strip("/").rstrip("/") or "specs").split("/", 1)[0]
+            out.append(specs_root)
+        if cfg.manage_memory_bank or cfg.manage_meta_tools or cfg.manage_meta_sdd:
+            memory_root = (cfg.memory_bank_root.strip("/").rstrip("/") or "meta/memory_bank").split("/", 1)[0]
+            out.append(memory_root)
+    return sorted(set(out))
+
+
+def _describe_dir(name: str) -> str:
+    hint = {
+        "src": "application/source code",
+        "app": "application entrypoint(s)",
+        "apps": "application entrypoint(s)",
+        "packages": "workspace packages",
+        "services": "services",
+        "backend": "backend service",
+        "frontend": "frontend app",
+        "web": "frontend/web app",
+        "mobile": "mobile app",
+        "docs": "documentation",
+        "infra": "infrastructure as code",
+        "deploy": "deployment",
+        "scripts": "scripts and tooling",
+        "tools": "tools and tooling",
+        "cmd": "CLI entrypoints",
+        "internal": "internal packages/modules",
+        "tests": "tests",
+        "test": "tests",
+        "e2e": "end-to-end tests",
+        "examples": "examples",
+        "meta": "process docs and meta artifacts",
+    }.get(name)
+    return f" ({hint})" if hint else ""
+
+
+def _discover_docs_links(project_root: Path, cfg: SddKitConfig) -> list[str]:
+    docs_root = cfg.docs_root.strip("/").rstrip("/") or "docs"
+    memory_bank_root = cfg.memory_bank_root.strip("/").rstrip("/") or "meta/memory_bank"
+    candidates = [
+        "README.md",
+        "CONTRIBUTING.md",
+        ".github/CONTRIBUTING.md",
+        ".github/pull_request_template.md",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        "SECURITY.md",
+        f"{docs_root}/README.md",
+        f"{docs_root}/index.md",
+        f"{docs_root}/SDD/README.md",
+    ]
+    candidates += [
+        f"{memory_bank_root}/README.md",
+        f"{memory_bank_root}/tech_stack.md",
+        f"{memory_bank_root}/current_tasks.md",
+    ]
+
+    out: list[str] = []
+    for rel in candidates:
+        # For kit-managed scaffolds, include the paths even if they don't exist yet
+        # (first-run determinism).
+        if rel.startswith(f"{docs_root}/") and cfg.manage_docs_scaffold:
+            out.append(rel)
+            continue
+        if rel.startswith(f"{memory_bank_root}/") and cfg.manage_memory_bank:
+            out.append(rel)
+            continue
+        if (project_root / rel).exists():
+            out.append(rel)
+    # De-dupe while preserving order.
+    seen: set[str] = set()
+    unique: list[str] = []
+    for p in out:
+        if p in seen:
+            continue
+        unique.append(p)
+        seen.add(p)
+    return unique
+
+
+def _render_repo_map_section(project_root: Path, cfg: SddKitConfig | None = None) -> str:
+    dirs = _discover_top_level_dirs(project_root, cfg)
+    if not dirs:
+        return ""
+    lines = ["## Repository map (auto)", ""]
+    for d in dirs:
+        lines.append(f"- `{d}/`{_describe_dir(d)}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _render_docs_index_section(project_root: Path, cfg: SddKitConfig) -> str:
+    docs = _discover_docs_links(project_root, cfg)
+    if not docs:
+        return ""
+    lines = ["## Docs index (auto)", ""]
+    for p in docs:
+        lines.append(f"- `{p}`")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _render_memory_bank_section(project_root: Path, cfg: SddKitConfig) -> str:
+    memory_bank_root = cfg.memory_bank_root.strip("/").rstrip("/") or "meta/memory_bank"
+    if not cfg.manage_memory_bank and not (project_root / memory_bank_root).exists():
+        return ""
+    return (
+        "## Memory Bank\n\n"
+        f"- Start at `{memory_bank_root}/README.md` and follow its Mandatory Reading Sequence.\n"
+        f"- If architecture/dependencies change, update `{memory_bank_root}/tech_stack.md` and relevant `patterns/*`.\n"
+        f"- For conflict-free tracking: do not edit `{memory_bank_root}/current_tasks.md` on feature branches; "
+        f"use `{memory_bank_root}/branch_updates/*.md` and consolidate on the integration branch.\n\n"
+    )
+
+
+def _render_agents_auto_fragment(*, project_root: Path, cfg: SddKitConfig, detection: dict[str, str]) -> str:
+    cmds = _infer_commands(detection)
+    repo_map = _render_repo_map_section(project_root)
+    docs_index = _render_docs_index_section(project_root, cfg)
+
+    lines = [
+        "# Auto context (generated by sdd-kit)",
+        "",
+        "## Quick commands",
+        "",
+        f"- Install: `{cmds['install_cmd']}`",
+        f"- Test: `{cmds['test_cmd']}`",
+        f"- Lint: `{cmds['lint_cmd']}`",
+        f"- Format: `{cmds['format_cmd']}`",
+        f"- Drift check: `python3 {cfg.github_kit_path}/bin/sdd-kit check --project .`",
+        "",
+    ]
+    if docs_index:
+        lines.append(docs_index.rstrip("\n"))
+    if repo_map:
+        lines.append(repo_map.rstrip("\n"))
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def _render_agents_md(*, project_root: Path, kit_root: Path, cfg: SddKitConfig, detection: dict[str, str], locale: str) -> str:
-    agents_tmpl = "agents/AGENTS.airis.md.tmpl" if (cfg.profile == "airis" or cfg.manage_memory_bank) else "agents/AGENTS.md.tmpl"
     # AGENTS.md is intentionally English-only across locales for consistency.
-    tpl = load_template("en", agents_tmpl).text
+    tpl = load_template("en", "agents/AGENTS.md.tmpl").text
 
     skillpack_dir = kit_root / "skillpacks" / cfg.skills_default_pack
     skills = list_skillpack_skills(skillpack_dir)
@@ -164,13 +342,18 @@ def _render_agents_md(*, project_root: Path, kit_root: Path, cfg: SddKitConfig, 
     skills_block = "\n".join(skills_lines) if skills_lines else "- (no skillpack found; run `sdd-kit import-codex-skills` in the kit repo)"
 
     cmds = _infer_commands(detection)
+    memory_bank_root = cfg.memory_bank_root.strip("/").rstrip("/") or "meta/memory_bank"
+    memory_bank_section = _render_memory_bank_section(project_root, cfg)
+    repo_map_section = _render_repo_map_section(project_root, cfg)
+    docs_index_section = _render_docs_index_section(project_root, cfg)
+
     data = {
         "kit_version": __version__,
         "project_name": cfg.project_name,
         "integration_branch": cfg.integration_branch,
         "is_fork": "true" if cfg.is_fork else "false",
         "upstream_project": cfg.upstream_project,
-        "memory_bank_root": cfg.memory_bank_root,
+        "memory_bank_root": memory_bank_root,
         "meta_sdd_root": cfg.meta_sdd_root,
         "meta_tools_root": cfg.meta_tools_root,
         "languages": detection.get("languages", ""),
@@ -183,6 +366,9 @@ def _render_agents_md(*, project_root: Path, kit_root: Path, cfg: SddKitConfig, 
         "codex_home": os.environ.get("CODEX_HOME", str(Path.home() / ".codex")),
         "kit_path": cfg.github_kit_path,
         "configured_locale": cfg.locale,
+        "memory_bank_section": memory_bank_section.rstrip("\n"),
+        "repo_map_section": repo_map_section.rstrip("\n"),
+        "docs_index_section": docs_index_section.rstrip("\n"),
     }
     rendered = render_template(tpl, data)
 
@@ -630,6 +816,21 @@ def _upsert_agents_manual_block(agents_md: str, manual_fragment: str) -> str:
     return out
 
 
+def _compose_agents_manual_fragment(*, auto_fragment: str, team_fragment: str) -> str:
+    auto_fragment = _normalize_newlines(auto_fragment).rstrip("\n")
+    team_fragment = _normalize_newlines(team_fragment).rstrip("\n")
+    parts = [
+        "<!-- sdd-kit: AUTO-GENERATED START -->",
+        auto_fragment,
+        "<!-- sdd-kit: AUTO-GENERATED END -->",
+        "",
+        "<!-- sdd-kit: TEAM NOTES START -->",
+        team_fragment,
+        "<!-- sdd-kit: TEAM NOTES END -->",
+    ]
+    return "\n".join(parts).rstrip() + "\n"
+
+
 def _plan_from_template_tree(
     *,
     project_root: Path,
@@ -641,6 +842,7 @@ def _plan_from_template_tree(
     dest_root: str,
     extra_data: dict[str, str],
     exec_mode: int | None = None,
+    ensure_only: bool = False,
 ) -> list[PlanItem]:
     # template_root is relative to templates locale root, e.g. "scaffolds/memory_bank"
     # dest_root is relative to project root, e.g. "meta/memory_bank"
@@ -678,6 +880,18 @@ def _plan_from_template_tree(
         tmpl = load_template(locale, name).text
         body = render_template(tmpl, data)
 
+        if ensure_only:
+            # Seed-only scaffolds: create missing files, but never overwrite existing content.
+            plan.append(
+                PlannedEnsureExists(
+                    target=target,
+                    content=body,
+                    reason=f"seed from template {name}",
+                    mode=exec_mode,
+                )
+            )
+            continue
+
         # Executable scaffolds (meta/tools) must keep shebang first.
         kind = "raw" if exec_mode is not None else _template_kind_for_path(target)
         if kind == "raw":
@@ -704,8 +918,7 @@ def _plan_writes(project_root: Path, kit_root: Path, cfg: SddKitConfig, detectio
 
     managed: list[ManagedFile] = []
     if cfg.manage_agents_md:
-        agents_tmpl = "agents/AGENTS.airis.md.tmpl" if (cfg.profile == "airis" or cfg.manage_memory_bank) else "agents/AGENTS.md.tmpl"
-        managed.append(ManagedFile(relpath="AGENTS.md", kind="markdown", template=agents_tmpl))
+        managed.append(ManagedFile(relpath="AGENTS.md", kind="markdown", template="agents/AGENTS.md.tmpl"))
     if cfg.manage_github_workflow and detection.get("has_github_actions") == "true":
         managed.append(ManagedFile(relpath=".github/workflows/sdd-kit-check.yml", kind="yaml", template="github/workflows/sdd-kit-check.yml.tmpl"))
 
@@ -785,6 +998,7 @@ def _plan_writes(project_root: Path, kit_root: Path, cfg: SddKitConfig, detectio
             template_root="scaffolds/memory_bank",
             dest_root=cfg.memory_bank_root,
             extra_data={},
+            ensure_only=True,
         )
 
     if cfg.manage_meta_tools:
@@ -822,6 +1036,7 @@ def _plan_writes(project_root: Path, kit_root: Path, cfg: SddKitConfig, detectio
             template_root="scaffolds/codex",
             dest_root=cfg.codex_root,
             extra_data={},
+            ensure_only=True,
         )
 
     # Spec Kit (speckit) installer: `.specify/*` and `speckit.*` prompts.
@@ -917,7 +1132,9 @@ def sync_project(
         frag_path = project_root / ".sddkit" / "fragments" / "AGENTS.manual.md"
         if agents_path.exists() and frag_path.exists():
             cur = agents_path.read_text(encoding="utf-8", errors="replace")
-            frag = frag_path.read_text(encoding="utf-8", errors="replace")
+            team = frag_path.read_text(encoding="utf-8", errors="replace")
+            auto = _render_agents_auto_fragment(project_root=project_root, cfg=cfg, detection=detection)
+            frag = _compose_agents_manual_fragment(auto_fragment=auto, team_fragment=team)
             updated = _upsert_agents_manual_block(cur, frag)
             if _normalize_newlines(cur) != updated:
                 print(f"PATCH {_project_rel(agents_path, project_root)} (manual block)")
@@ -974,7 +1191,9 @@ def check_project(project_root: Path, *, config_path: Path, cfg: SddKitConfig, d
         frag_path = project_root / ".sddkit" / "fragments" / "AGENTS.manual.md"
         if agents_path.exists() and frag_path.exists():
             cur = agents_path.read_text(encoding="utf-8", errors="replace")
-            frag = frag_path.read_text(encoding="utf-8", errors="replace")
+            team = frag_path.read_text(encoding="utf-8", errors="replace")
+            auto = _render_agents_auto_fragment(project_root=project_root, cfg=cfg, detection=detection)
+            frag = _compose_agents_manual_fragment(auto_fragment=auto, team_fragment=team)
             expected = _upsert_agents_manual_block(cur, frag)
             if _normalize_newlines(cur) != expected:
                 print(f"DRIFT {_project_rel(agents_path, project_root)} (manual block)")

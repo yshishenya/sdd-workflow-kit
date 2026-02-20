@@ -1,45 +1,18 @@
-# Commit Messages (Detailed Policy)
+# Commit Messages (Seeded)
 
-This project requires detailed commit messages so changes are easy to understand and review.
+Use Conventional Commits:
 
-## Required format
+`type(scope): summary`
 
-Title (<= 72 chars, Conventional Commits):
+Examples:
 
-```
-<type>: <short summary>
-```
+- `feat(api): add export endpoint`
+- `fix(auth): handle token refresh race`
+- `chore(ci): pin action versions`
 
-Blank line, then required sections:
+Guidelines:
 
-```
-Context:
-- why this change was needed
+- Keep commits small and atomic.
+- Use imperative mood in the subject (“add”, “fix”, “refactor”).
+- Use the body to explain **why** (not just what).
 
-Changes:
-- key changes (files/modules)
-
-Tests:
-- not run (reason) OR list tests
-
-Risks:
-- none OR describe risks/migrations
-```
-
-## Enforcement (automatic)
-
-We enforce this with a git hook + commit template:
-
-- Hook: `.githooks/commit-msg`
-- Template: `.gitmessage`
-
-Run once per clone to enable:
-
-```bash
-meta/tools/setup_git_hooks.sh
-```
-
-## Notes
-
-- Merge/revert/fixup/squash commits are exempted by the hook.
-- If tests are not run, always state the reason in `Tests:`.

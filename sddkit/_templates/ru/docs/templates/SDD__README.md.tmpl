@@ -130,7 +130,12 @@ python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
 
 Так Spec Kit и overlay не конфликтуют.
 
-Важно: не редактируйте `AGENTS.md` руками. В Spec Kit mode `sdd-kit check` проверяет, что MANUAL блок совпадает с `.sddkit/fragments/AGENTS.manual.md`.
+Важно: не редактируйте `AGENTS.md` руками. В Spec Kit mode MANUAL блок собирается из:
+
+- auto-секции, которую генерирует `sdd-kit sync` на основе структуры/документации репозитория
+- team notes секции из `.sddkit/fragments/AGENTS.manual.md`
+
+`sdd-kit check` проверяет, что MANUAL блок совпадает с ожидаемой композицией.
 
 По умолчанию в новых репозиториях `.sddkit/fragments/AGENTS.manual.md` уже создается с кросс-ссылками на:
 

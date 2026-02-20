@@ -1,362 +1,48 @@
-# Product Brief
+# Product Brief (Optional)
 
-## Project Name
+This document captures the product context: **why** we are building this and **what good looks like**.
 
-**{{project_name}}**
-
-## Project Goal
-
-A full-featured web interface for interacting with Large Language Models (LLMs) with integrated billing, quota management, and multi-provider AI support. {{project_name}} enables users to chat with AI models, manage knowledge bases, create custom tools and functions, and collaborate in real-time.
+Keep it short and concrete. Link to deeper docs if they exist.
 
 ---
 
-## Target Audience
+## Problem
 
-### Primary Users
+- What user problem does this product solve?
+- What is the current pain?
 
-- **Individual AI enthusiasts**: People who want a self-hosted, customizable ChatGPT alternative
-- **Developers**: Engineers building AI-powered applications and experimenting with different models
-- **Content creators**: Writers, researchers using AI for content generation and analysis
-- **Data analysts**: Professionals leveraging AI for data insights and reporting
+## Target users
 
-### Secondary Users
+- Primary users: `<fill>`
+- Secondary users: `<fill>`
 
-- **Small teams and organizations**: Groups needing collaborative AI workspace
-- **Students and educators**: Academic users exploring AI capabilities
-- **Businesses**: Companies requiring private AI infrastructure with usage controls
+## Goals (success criteria)
 
-### Stakeholders
+- `<goal>`
+- `<goal>`
 
-- **Project Owner**: Private fork maintainer
-- **System Administrators**: Managing deployment, billing, and user access
-- **End Users**: Paying subscribers using the platform
+## Non-goals
 
----
+- `<non-goal>`
+- `<non-goal>`
 
-## Key Features
+## Key workflows (user journeys)
 
-### 1. Multi-Provider AI Integration
+1. `<workflow>`
+2. `<workflow>`
 
-**Description**: Support for multiple LLM providers in a unified interface
+## Constraints
 
-- **Providers**: OpenAI (GPT-4, GPT-3.5), Anthropic (Claude), Google (Gemini), Ollama (local models)
-- **Model Switching**: Seamless switching between models within conversation
-- **Custom Endpoints**: Configure custom API endpoints and models
-- **Streaming Support**: Real-time response streaming for all providers
+- Performance: `<fill>`
+- Security/compliance: `<fill>`
+- Platforms: `<fill>`
 
-### 2. Knowledge Base & RAG (Retrieval-Augmented Generation)
+## Metrics
 
-**Description**: Upload documents and query them with AI context
+- `<metric>` (how measured)
 
-- **Document Upload**: PDF, TXT, DOCX, MD support
-- **Vector Search**: Semantic search using embeddings (pgvector)
-- **Context Injection**: Automatically inject relevant knowledge into prompts
-- **Collections**: Organize documents into knowledge collections
+## Risks / Open questions
 
-### 3. Comprehensive Billing System
+- `<risk>`
+- `<question>`
 
-**Description**: Subscription-based monetization with quota enforcement
-
-- **Subscription Plans**: Flexible plans with customizable quotas
-- **Usage Tracking**: Real-time tracking of tokens, requests, images, audio
-- **Quota Enforcement**: Automatic limitation based on plan limits
-- **Payment Processing**: YooKassa integration (recurring payments, webhooks)
-- **Admin Dashboard**: Plan management, subscriber analytics, audit logs
-- **Multi-language**: English/Russian support for billing UI
-
-### 4. Custom Tools & Functions
-
-**Description**: Extend AI capabilities with custom JavaScript/Python functions
-
-- **Function Editor**: Browser-based code editor with syntax highlighting
-- **Tool Library**: Share and reuse custom tools across chats
-- **API Integration**: Connect AI to external APIs and services
-- **Python Execution**: Run Python code in browser via Pyodide
-
-### 5. Advanced Chat Features
-
-**Description**: Rich chat experience with collaboration
-
-- **Multi-modal**: Text, images, audio, file uploads
-- **Chat History**: Full conversation history with search
-- **Branching**: Create conversation branches (alternate responses)
-- **Sharing**: Share chats via public links
-- **Real-time Collaboration**: Multiple users editing same chat (Yjs CRDT)
-- **Markdown & LaTeX**: Full formatting support
-- **Code Blocks**: Syntax highlighting with copy button
-- **Diagrams**: Mermaid diagram rendering
-
-### 6. Workspace Organization
-
-**Description**: Organize content and resources
-
-- **Folders**: Hierarchical organization of chats
-- **Notes**: Personal notes system
-- **Prompts Library**: Save and reuse prompt templates
-- **Model Configs**: Custom model parameters (temperature, top-p, etc.)
-- **Channels**: Multi-user discussion spaces
-
-### 7. Admin Panel
-
-**Description**: Comprehensive administration interface
-
-- **User Management**: Create, edit, disable users
-- **Role-Based Access**: Admin, user, guest roles
-- **Billing Management**: Plan CRUD, subscriber tracking, analytics
-- **System Settings**: Configure features, integrations, security
-- **Evaluations**: LLM response quality testing
-- **Audit Logs**: Complete action logging for compliance
-
-### 8. Image & Audio Generation
-
-**Description**: AI-powered multimedia generation
-
-- **Image Generation**: DALL-E, Stable Diffusion integration
-- **Text-to-Speech**: Multiple TTS engines (Kokoro, browser native)
-- **Speech-to-Text**: Audio transcription via Whisper API
-- **Image Analysis**: Vision models for image understanding
-
----
-
-## Business Success Metrics
-
-### User Engagement
-
-- **Daily Active Users (DAU)**: Target 70% of paid subscribers
-- **Average Session Duration**: 15+ minutes per session
-- **Messages per User**: 50+ messages/week average
-
-### Revenue Metrics
-
-- **Monthly Recurring Revenue (MRR)**: Steady growth month-over-month
-- **Conversion Rate**: 15% free-to-paid conversion
-- **Churn Rate**: Below 5% monthly
-- **Average Revenue Per User (ARPU)**: Increase through upsells
-
-### Technical Performance
-
-- **API Response Time**: P95 < 2s for chat responses
-- **Uptime**: 99.5% availability
-- **Quota Compliance**: Zero quota bypass incidents
-- **Payment Success Rate**: 95%+ successful transactions
-
-### Quality Metrics
-
-- **Customer Satisfaction**: NPS score 40+
-- **Support Ticket Volume**: Decreasing trend
-- **Bug Resolution Time**: 80% within 24 hours
-
----
-
-## Competitive Advantages
-
-### Technical Advantages
-
-1. **Multi-Provider Flexibility**: Unlike ChatGPT (OpenAI-only), supports all major providers
-2. **Self-Hosted Option**: Full data control, no vendor lock-in
-3. **Extensibility**: Custom functions, tools, pipelines (not available in standard ChatGPT)
-4. **RAG Integration**: Built-in knowledge base without third-party tools
-5. **Real-time Collaboration**: CRDT-based multi-user editing
-
-### User Experience Benefits
-
-1. **Unified Interface**: Single interface for all AI models
-2. **Advanced Organization**: Folders, channels, workspaces
-3. **Developer-Friendly**: API access, custom integrations
-4. **Offline Capabilities**: IndexedDB for client-side storage
-
-### Cost/Efficiency Improvements
-
-1. **Usage-Based Billing**: Pay only for what you use
-2. **Quota Management**: Prevent runaway costs
-3. **Local Model Support**: Free inference via Ollama
-4. **Efficient Caching**: Redis caching reduces API costs
-
-### Innovation Aspects
-
-1. **Browser Python Execution**: Pyodide integration for in-browser Python
-2. **Function Calling**: Advanced tool use capabilities
-3. **Model Context Protocol (MCP)**: Standardized tool integration
-4. **WebSocket Real-time**: Instant updates and notifications
-
----
-
-## User Stories
-
-### Individual Users
-
-**As an AI enthusiast**, I want to compare responses from GPT-4 and Claude side-by-side so that I can choose the best model for my task.
-
-**As a developer**, I want to create custom functions that call my APIs so that I can extend AI capabilities with my services.
-
-**As a writer**, I want to upload research documents and query them with AI so that I can quickly find relevant information.
-
-### Teams
-
-**As a team lead**, I want to track my team's AI usage and costs so that I can manage budget effectively.
-
-**As a collaborator**, I want to work on the same chat with teammates in real-time so that we can brainstorm together.
-
-### Administrators
-
-**As an admin**, I want to create subscription plans with different quotas so that I can monetize the platform.
-
-**As a system admin**, I want to see audit logs of all admin actions so that I can ensure compliance and security.
-
-**As a billing admin**, I want to see which plans are most popular so that I can optimize pricing.
-
----
-
-## Technical Constraints
-
-### Performance Requirements
-
-- **Concurrent Users**: Support 100+ simultaneous users
-- **Message Latency**: Streaming responses start within 500ms
-- **Database**: Handle 1M+ messages, 10K+ users
-- **Storage**: Scalable file storage (local or S3)
-
-### Scalability Needs
-
-- **Horizontal Scaling**: Stateless design for multi-instance deployment
-- **Database Pooling**: Efficient connection management
-- **Async Architecture**: Non-blocking I/O for high throughput
-- **Redis Clustering**: Optional Redis cluster for caching
-
-### Security Requirements
-
-- **Authentication**: JWT-based with refresh tokens
-- **Authorization**: Role-based access control (RBAC)
-- **Password Security**: Bcrypt/Argon2 hashing
-- **API Security**: Rate limiting, CORS, input validation
-- **Payment Security**: PCI DSS compliance via YooKassa
-- **Webhook Verification**: Signature validation for payments
-
-### Compliance Requirements
-
-- **GDPR**: User data export, right to deletion
-- **Audit Logging**: Complete admin action tracking
-- **Data Privacy**: No logging of chat content (optional)
-- **Financial Records**: Transaction history retention
-
-### Platform Support
-
-- **Browsers**: Modern evergreen browsers (Chrome, Firefox, Safari, Edge)
-- **Mobile**: Responsive design, mobile-optimized
-- **Deployment**: Docker, Kubernetes, bare metal
-- **Databases**: PostgreSQL (production), SQLite (development)
-
----
-
-## Future Vision
-
-### Phase 1: Core Functionality (Current)
-
-- Multi-provider AI chat
-- Billing system with quota enforcement
-- Knowledge base with RAG
-- Custom tools and functions
-- Admin panel
-
-### Phase 2: Enhanced Features (Q1 2026)
-
-- **Mobile Apps**: Native iOS and Android apps
-- **Advanced Analytics**: Usage patterns, cost optimization insights
-- **Team Features**: Workspaces, shared billing, team management
-- **Marketplace**: Community tool/function marketplace
-- **API Platform**: Public API for third-party integrations
-
-### Phase 3: Advanced Capabilities (Q2-Q3 2026)
-
-- **AI Agents**: Multi-step autonomous agents
-- **Workflow Automation**: No-code workflow builder
-- **Advanced RAG**: Graph-based knowledge, multi-document reasoning
-- **Fine-tuning Integration**: Upload and use custom fine-tuned models
-- **White-label**: Rebrandable version for enterprises
-
-### Long-term Vision (2027+)
-
-- **AI-First Operating System**: Complete productivity suite
-- **Ecosystem**: Plugin architecture for extensions
-- **Enterprise Features**: SSO, advanced security, compliance tools
-- **Global Scale**: Multi-region deployment, CDN integration
-
----
-
-## Billing Strategy (Current Implementation)
-
-Airis is PAYG-first.
-
-### Product Modes
-
-- **PAYG wallet (primary B2C mode)**: user tops up balance and pays per usage based on rate cards.
-- **Lead magnet quotas (optional)**: free-start quotas that apply only to allowlisted models.
-- **Subscription plans (optional)**: plan-based product mode, feature-flagged and not required for B2C.
-
-### Quota / Cost Metrics
-
-- **Tokens Input**: prompt tokens consumed
-- **Tokens Output**: response tokens generated
-- **Requests**: number of API calls
-- **Images**: generated/analyzed images
-- **Audio Minutes**: TTS/STT processing time
-
-### Payment Flow (PAYG)
-
-1. User tops up wallet in the UI
-2. System creates YooKassa payment
-3. User redirects to the payment page
-4. YooKassa sends webhook on success
-5. System credits wallet balance
-6. Per-request holds/settles enforce guardrails and prevent overdraft
-
-### Payment Flow (Subscriptions, if enabled)
-
-1. User selects plan
-2. System creates YooKassa payment/subscription
-3. YooKassa sends webhook events
-4. System creates/renews subscription and enforces plan quotas
-
----
-
-## Monitoring & Observability
-
-### Key Metrics
-
-- **Application Performance**: Response times, error rates
-- **Billing Health**: Payment success rate, churn
-- **Usage Patterns**: Popular models, quota utilization
-- **System Resources**: CPU, memory, database performance
-
-### Logging
-
-- **Structured Logs**: JSON format with context
-- **Log Levels**: DEBUG for dev, INFO for prod
-- **Sensitive Data**: No PII or secrets in logs
-- **Audit Trail**: Complete admin action history
-
----
-
-## Known Limitations
-
-### Current Limitations
-
-- **Language Support**: Full UI only in EN/RU
-- **Mobile App**: Web-only, no native apps
-- **Video Processing**: No video analysis (yet)
-- **Model Training**: No fine-tuning interface
-- **Advanced Teams**: Basic collaboration only
-
-### Planned Improvements
-
-- Expand language support (ES, DE, FR, ZH)
-- Develop native mobile apps
-- Add video analysis capabilities
-- Build fine-tuning pipeline
-- Enterprise team features
-
----
-
-**Last Updated**: 2025-12-11
-**Version**: 0.6.41
-**Status**: Active Development
