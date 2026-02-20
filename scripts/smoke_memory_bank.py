@@ -20,6 +20,10 @@ def main() -> int:
     ns = ap.parse_args()
 
     kit_root = Path(__file__).resolve().parents[1]
+    kit_sha = (
+        subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(kit_root), check=True, capture_output=True, text=True)
+        .stdout.strip()
+    )
 
     tmp_root = Path(tempfile.mkdtemp(prefix="sddkit-memory-bank-smoke-"))
     repo = tmp_root / "repo"
@@ -45,6 +49,10 @@ def main() -> int:
         )
         run(["git", "commit", "-m", "Add sdd-workflow-kit submodule"], cwd=repo)
         run(["git", "submodule", "update", "--init", "--recursive"], cwd=repo)
+
+        # Ensure the submodule checkout matches this working tree's HEAD (so the smoke test
+        # can validate unmerged changes on a feature branch).
+        run(["git", "checkout", kit_sha], cwd=repo / ".tooling" / "sdd-workflow-kit")
 
         project_cli = repo / ".tooling" / "sdd-workflow-kit" / "bin" / "sdd-kit"
 
@@ -91,4 +99,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
