@@ -4,6 +4,12 @@
 [![release](https://img.shields.io/github/v/release/yshishenya/sdd-workflow-kit)](https://github.com/yshishenya/sdd-workflow-kit/releases)
 [![python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 
+Language: [🇬🇧 English](#lang-en) (collapse by default) | [🇷🇺 Русский](#lang-ru) (default)
+
+<a id="lang-en"></a>
+<details>
+<summary>English</summary>
+
 `sdd-workflow-kit` is a **git submodule** that installs a reproducible Spec-Driven Development workflow into any repository.
 
 Core idea:
@@ -70,7 +76,9 @@ Profiles:
 
 Note:
 
-- `memory_bank` only turns on `manage.memory_bank=true` by default. Advanced scaffolds (`manage.meta_tools`, `manage.meta_sdd`, `manage.codex_scaffold`) are opt-in in `.sddkit/config.toml`.
+- `memory_bank` and deprecated `airis` enable only `manage.memory_bank=true` by default.
+- Existing repos that already explicitly set legacy flags (`manage.meta_tools`, `manage.meta_sdd`, `manage.codex_scaffold`) keep their values.
+- New bootstraps will not auto-enable legacy `meta_*` scaffolds; enable those in `.sddkit/config.toml` only when you need old workflows.
 
 ### 3) Commit what was added
 
@@ -146,6 +154,21 @@ Creates/updates:
 - A new `specs/###-<slug>/` directory
 - `specs/###-<slug>/spec.md`
 - Usually creates and checks out a new feature branch
+
+Current installed `speckit-*` skills in this kit are:
+
+- `$speckit-specify`
+- `$speckit-clarify`
+- `$speckit-plan`
+- `$speckit-planreview` (overlay, multi-model)
+- `$speckit-tasks`
+- `$speckit-analyze`
+- `$speckit-implement`
+- `$speckit-checklist`
+- `$speckit-constitution`
+- `$speckit-taskstoissues`
+
+If you use `$speckit-*`, these SKILLs are generated from upstream Spec Kit templates plus the overlay command.
 
 ### `$speckit-clarify`
 
@@ -397,3 +420,314 @@ The correct flow is “script-first”.
 
 - Run `sdd-kit sync` to ensure you have the latest skill templates.
 - Restart Codex / start a new chat if the UI caches skills.
+
+</details>
+
+<a id="lang-ru"></a>
+
+---
+
+## Русский / RU
+
+`sdd-workflow-kit` — это **submodule** для установки воспроизводимого SDD-пайплайна в репозиторий.
+
+Идея:
+
+- Как единую каноническую модель SDD используется **GitHub Spec Kit**: `spec.md -> plan.md -> tasks.md -> implement`
+- Роль overlay берёт на себя `sdd-kit` (этот репозиторий): инфраструктура становится **переиспользуемой, безопасной и drift-checkable**.
+
+---
+
+## Что даёт кит
+
+- `sdd-kit bootstrap`: создать `.sddkit/config.toml` и выполнить начальную синхронизацию
+- `sdd-kit sync`: установить/обновить управляемые артефакты (safe + idempotent)
+- `sdd-kit check`: gate для CI (падает на `DRIFT/MISSING/UNMANAGED`)
+- Дополнительно: инициализировать локальный **Memory Bank** (`meta/memory_bank/`) как базу знаний
+- Режим Spec Kit устанавливает `.specify/*` и генерирует **Codex skills** `speckit-*` (вызов как `$speckit-plan` и т.д.)
+
+---
+
+## Как это устроено
+
+```mermaid
+flowchart LR
+  KIT["sdd-workflow-kit (git submodule)"] -->|"bootstrap/sync"| SYNC["sdd-kit"]
+  SYNC --> SPECIFY[".specify/* (Spec Kit шаблоны + scripts)"]
+  SYNC --> SKILLS[".codex/skills/speckit-*/SKILL.md"]
+  SYNC --> CI[".github/workflows/sdd-kit-check.yml (optional)"]
+
+  DEV["Developer (Codex)"] -->|"runs"| CMD["$speckit-specify -> $speckit-plan -> $speckit-tasks -> $speckit-implement"]
+  CMD --> SPECIFY
+  CMD --> SPECS["specs/###-feature/ (spec.md, plan.md, tasks.md)"]
+```
+
+Правила владения:
+
+- `.specify/**`: управляется `sdd-kit` из pinned-версии Spec Kit (drift-check).
+- `.codex/skills/speckit-*/SKILL.md`: управляется `sdd-kit`. Drift-checkируется.
+- `specs/**`: артефакты фичи в читаемом markdown, не проверяются на drift.
+- `AGENTS.md`: создаётся/обновляется `update-agent-context` из Spec Kit; в режиме `speckit` `sdd-kit` корректирует только `MANUAL ADDITIONS` block.
+
+---
+
+## Установка (для админа репозитория)
+
+### 1) Подключить submodule
+
+```bash
+git submodule add git@github.com:yshishenya/sdd-workflow-kit.git .tooling/sdd-workflow-kit
+git submodule update --init --recursive
+```
+
+### 2) Bootstrap (рекомендовано: `--profile speckit`)
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit bootstrap --project . --profile speckit --locale en
+```
+
+Профили:
+
+- `speckit`: ставит инфраструктуру Spec Kit + `speckit-*` skills (рекомендуется)
+- `memory_bank`: инициализирует `meta/memory_bank/*` (редактируемый seed-only режим)
+- `generic`: минимальные скелеты (`AGENTS.md`, шаблоны docs, опционально CI drift gate)
+- `airis`: deprecated alias для `memory_bank` (оставлен для обратной совместимости)
+
+Важно:
+
+- `memory_bank` и deprecated `airis` по умолчанию включают только `manage.memory_bank=true`.
+- В уже существующих репозиториях уже заданные legacy-флаги (`manage.meta_tools`, `manage.meta_sdd`, `manage.codex_scaffold`) сохраняются.
+- Для новых `bootstrap` legacy `meta_*` больше не включаются автоматически; включайте их вручную в `.sddkit/config.toml`, если вам нужен старый SDD-флоу.
+
+### 3) Зафиксировать изменения
+
+Обычно создаются/обновляются:
+
+- `.sddkit/`
+- `docs/` (templates)
+- `.specify/` (в режиме `speckit`)
+- `.codex/skills/` (в режиме `speckit`)
+- `.github/workflows/` (если GitHub Actions уже есть)
+
+Коммитить вместе с изменением submodule-поинтера.
+
+---
+
+## Повседневная работа (разработчик)
+
+### 0) После `git clone`
+
+```bash
+git submodule update --init --recursive
+```
+
+### 1) SDD loop (Spec Kit)
+
+В Codex запускай как скиллы:
+
+1. `$speckit-specify`
+2. `$speckit-plan`
+3. `$speckit-tasks`
+4. `$speckit-implement`
+
+Артефакты:
+
+- `specs/###-feature-name/spec.md`
+- `specs/###-feature-name/plan.md`
+- `specs/###-feature-name/tasks.md`
+
+### 2) Перед PR
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit check --project .
+```
+
+---
+
+## Набор команд Spec Kit (`speckit-*`)
+
+Эти команды поставляются как **Codex skills**:
+
+- `$speckit-specify`
+- `$speckit-clarify`
+- `$speckit-plan`
+- `$speckit-planreview` (overlay, multi-model review)
+- `$speckit-tasks`
+- `$speckit-analyze`
+- `$speckit-implement`
+- `$speckit-checklist`
+- `$speckit-constitution`
+- `$speckit-taskstoissues`
+
+Ключевое поведение:
+
+- Если скилл обращается к `.specify/scripts/...`, нужно выполнить скрипт в терминале.
+- Источник правды — вывод скриптов (обычно JSON), не файл-описание.
+
+### Кратко по командам
+
+- `$speckit-specify` — создать фичу и `spec.md`.
+- `$speckit-clarify` — найти неоднозначности и зафиксировать уточнения в `spec.md`.
+- `$speckit-plan` — сгенерировать технический `plan.md`, артефакты и обновить `AGENTS.md`.
+- `$speckit-tasks` — создать/обновить `tasks.md`.
+- `$speckit-planreview` — мульти-модельный обзор без внесения изменений.
+- `$speckit-analyze` — проверка согласованности `spec.md/plan.md/tasks.md`.
+- `$speckit-implement` — выполнить задачи по `tasks.md`.
+- `$speckit-checklist` — чеклист для текущей фичи.
+- `$speckit-constitution` — создать/обновить `.specify/memory/constitution.md`.
+- `$speckit-taskstoissues` — разложить `tasks.md` в GitHub issues (по желанию).
+
+---
+
+## AGENTS.md: как генерируется
+
+Политика:
+
+- `AGENTS.md` всегда только на English.
+- Язык общения для людей задаётся через `.sddkit/config.toml` → `[sddkit].locale`.
+
+В режиме `speckit`:
+
+- `AGENTS.md` создаёт Spec Kit (`update-agent-context`), обычно во время `$speckit-plan`.
+- `sdd-kit sync` обновляет только блок `MANUAL ADDITIONS`.
+- Этот блок формируется из:
+  - автораздела с repo-схемой
+  - `.sddkit/fragments/AGENTS.manual.md`
+
+Не редактируй `AGENTS.md` вручную — меняй `.sddkit/fragments/AGENTS.manual.md`, затем:
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
+```
+
+---
+
+## Memory Bank (необязательный)
+
+Включить:
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit bootstrap --project . --profile memory_bank
+```
+
+Что делает:
+
+- создаёт `meta/memory_bank/*` из шаблонов
+- не перезаписывает существующий контент при последующих sync
+
+Режимы:
+
+- `manage.memory_bank_mode = "seed"` (по умолчанию)
+- `manage.memory_bank_mode = "managed"` (опционально, включает строгий drift-check)
+
+---
+
+## Codex scaffold (необязательный)
+
+1. `manage.codex_scaffold = true` в `.sddkit/config.toml`
+2. `python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .`
+
+Режимы:
+
+- по умолчанию `manage.codex_scaffold_mode = "seed"`
+- `manage.codex_scaffold_mode = "managed"` только если нужен жесткий контроль изменений
+
+---
+
+## Legacy JSON SDD (необязательно)
+
+Если нужен старый JSON-подход, включи:
+
+```toml
+[manage]
+meta_tools = true
+meta_sdd = true
+```
+
+И затем:
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit check --project .
+```
+
+Совместно с `--profile speckit` обычно `meta_*` лучше не включать, чтобы не смешивать два SDD-флоу.
+
+---
+
+## CI gate
+
+Если в репозитории есть GitHub Actions, можно поставить workflow, который выполняет:
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit check --project . --config .sddkit/config.toml
+```
+
+Так контролируется отсутствующий drift инфраструктуры Spec Kit и skills.
+
+---
+
+## Обновление
+
+### Обновить кит в целевом репозитории (админ)
+
+1. Инициализировать/обновить подмодули:
+
+```bash
+git submodule update --init --recursive
+```
+
+2. Обновить поинтер submodule на новый тег/sha:
+
+```bash
+cd .tooling/sdd-workflow-kit
+git fetch --tags
+git checkout <tag-or-sha>
+cd -
+git add .tooling/sdd-workflow-kit
+git commit -m "chore(tooling): bump sdd-workflow-kit"
+```
+
+3. Применить и проверить:
+
+```bash
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit sync --project .
+python3 .tooling/sdd-workflow-kit/bin/sdd-kit check --project .
+```
+
+### Обновить Spec Kit upstream (для мейнтейнеров этого кита)
+
+`upstreams/spec-kit`:
+
+```bash
+cd upstreams/spec-kit
+git fetch --tags
+git checkout <tag-or-sha>
+cd -
+git add upstreams/spec-kit
+git commit -m "chore(upstreams): bump spec-kit"
+
+python3 scripts/smoke_speckit.py
+```
+
+После этого создать новый release `sdd-workflow-kit`.
+
+---
+
+## Проблемы и решения
+
+### Дублируются команды `$speckit-*` в Codex
+
+Обычно скиллы установлены в двух местах:
+
+- `~/.codex/skills`
+- `.codex/skills`
+
+Оставь только один источник.
+
+### Скилл `$speckit-*` показывает текст скрипта вместо запуска
+
+Правильный порядок: сначала синк скиллов и скриптов.
+
+- `sdd-kit sync`
+- Перезапуск/новый чат в Codex при кэшировании.
