@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -171,33 +172,62 @@ _DEFAULT_REPO_DIR_IGNORES = {
 
 
 def _discover_top_level_dirs(project_root: Path, cfg: SddKitConfig | None = None) -> list[str]:
-    out: list[str] = []
+    names: set[str] = set()
+
+    # Prefer git-tracked paths so local untracked build/artifact dirs don't cause drift.
     try:
-        for p in project_root.iterdir():
-            if not p.is_dir():
-                continue
-            name = p.name
-            if name in _DEFAULT_REPO_DIR_IGNORES:
-                continue
-            if name.startswith("."):
-                continue
-            out.append(name)
+        if (project_root / ".git").exists():
+            raw = subprocess.run(
+                ["git", "ls-files", "-z"],
+                cwd=str(project_root),
+                check=True,
+                capture_output=True,
+            ).stdout
+            for part in raw.split(b"\x00"):
+                if not part:
+                    continue
+                try:
+                    p = part.decode("utf-8", errors="ignore")
+                except Exception:
+                    continue
+                if "/" not in p:
+                    continue
+                top = p.split("/", 1)[0]
+                names.add(top)
     except Exception:
-        return []
+        # Fall back to filesystem discovery.
+        pass
+
+    if not names:
+        try:
+            for p in project_root.iterdir():
+                if not p.is_dir():
+                    continue
+                names.add(p.name)
+        except Exception:
+            return []
 
     # Include directories that are expected to exist after `sync` based on config,
     # so AGENTS.md is deterministic on first bootstrap (before scaffolds exist).
     if cfg is not None:
         if cfg.manage_docs_scaffold:
             docs_root = (cfg.docs_root.strip("/").rstrip("/") or "docs").split("/", 1)[0]
-            out.append(docs_root)
+            names.add(docs_root)
         if cfg.manage_specs_scaffold:
             specs_root = (cfg.specs_root.strip("/").rstrip("/") or "specs").split("/", 1)[0]
-            out.append(specs_root)
+            names.add(specs_root)
         if cfg.manage_memory_bank or cfg.manage_meta_tools or cfg.manage_meta_sdd:
             memory_root = (cfg.memory_bank_root.strip("/").rstrip("/") or "meta/memory_bank").split("/", 1)[0]
-            out.append(memory_root)
-    return sorted(set(out))
+            names.add(memory_root)
+
+    out: list[str] = []
+    for name in sorted(names):
+        if name in _DEFAULT_REPO_DIR_IGNORES:
+            continue
+        if name.startswith("."):
+            continue
+        out.append(name)
+    return out
 
 
 def _describe_dir(name: str) -> str:
@@ -307,7 +337,7 @@ def _render_memory_bank_section(project_root: Path, cfg: SddKitConfig) -> str:
 
 def _render_agents_auto_fragment(*, project_root: Path, cfg: SddKitConfig, detection: dict[str, str]) -> str:
     cmds = _infer_commands(detection)
-    repo_map = _render_repo_map_section(project_root)
+    repo_map = _render_repo_map_section(project_root, cfg)
     docs_index = _render_docs_index_section(project_root, cfg)
 
     lines = [
@@ -401,10 +431,10 @@ def _template_kind_for_path(path: Path) -> str:
     ext = path.suffix.lower()
     if ext == ".md":
         return "markdown"
-    if ext in {".yml", ".yaml"}:
+    if ext in {".yml", ".yaml", ".toml", ".dockerfile"}:
         return "yaml"
     # For file types where a header could break parsing or executability, keep templates "raw".
-    if ext in {".sh", ".py", ".toml", ".json", ".dockerfile"}:
+    if ext in {".sh", ".py", ".json"}:
         return "raw"
     return "text"
 
@@ -998,7 +1028,7 @@ def _plan_writes(project_root: Path, kit_root: Path, cfg: SddKitConfig, detectio
             template_root="scaffolds/memory_bank",
             dest_root=cfg.memory_bank_root,
             extra_data={},
-            ensure_only=True,
+            ensure_only=(cfg.memory_bank_mode != "managed"),
         )
 
     if cfg.manage_meta_tools:
@@ -1036,7 +1066,7 @@ def _plan_writes(project_root: Path, kit_root: Path, cfg: SddKitConfig, detectio
             template_root="scaffolds/codex",
             dest_root=cfg.codex_root,
             extra_data={},
-            ensure_only=True,
+            ensure_only=(cfg.codex_scaffold_mode != "managed"),
         )
 
     # Spec Kit (speckit) installer: `.specify/*` and `speckit.*` prompts.

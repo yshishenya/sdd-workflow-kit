@@ -30,6 +30,10 @@ def main() -> int:
     kit_cli = kit_root / "bin" / "sdd-kit"
     if not kit_cli.exists():
         raise FileNotFoundError(f"Expected kit CLI at {kit_cli}")
+    kit_sha = (
+        subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(kit_root), check=True, capture_output=True, text=True)
+        .stdout.strip()
+    )
 
     tmp_root = Path(tempfile.mkdtemp(prefix="sddkit-speckit-smoke-"))
     repo = tmp_root / "repo"
@@ -58,6 +62,9 @@ def main() -> int:
 
         project_kit = repo / ".tooling" / "sdd-workflow-kit"
         project_cli = project_kit / "bin" / "sdd-kit"
+        # Ensure the submodule checkout matches this working tree's HEAD (so the smoke test
+        # validates unmerged changes on a feature branch).
+        run(["git", "checkout", kit_sha], cwd=project_kit)
 
         # Bootstrap and sync Spec Kit mode.
         run(
