@@ -15,6 +15,14 @@ def _abs(p: str | Path) -> Path:
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
+    """Parse command-line arguments for the sdd-kit.
+    
+    Args:
+        argv (list[str]): List of command-line arguments.
+    
+    Returns:
+        argparse.Namespace: Parsed command-line arguments.
+    """
     parser = argparse.ArgumentParser(prog="sdd-kit")
     sub = parser.add_subparsers(dest="cmd", required=True)
 

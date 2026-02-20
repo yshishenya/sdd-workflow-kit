@@ -113,6 +113,22 @@ def write_default_config(
     profile_override: str | None = None,
     locale_override: str | None = None,
 ) -> None:
+    """Write a default configuration file for the project.
+    
+    This function creates a configuration file at the specified `config_path` by
+    first ensuring the parent directory exists. It then gathers necessary
+    information such as the project name, locale, and profile settings, which are
+    determined based on the provided `detection` dictionary and optional overrides.
+    The content is formatted into a structured configuration format and written to
+    the specified path.
+    
+    Args:
+        config_path (Path): The path where the configuration file will be written.
+        project_root (Path): The root directory of the project.
+        detection (dict[str, Any]): A dictionary containing detection information.
+        profile_override (str | None?): An optional profile override.
+        locale_override (str | None?): An optional locale override.
+    """
     config_path.parent.mkdir(parents=True, exist_ok=True)
     # Keep config minimal and stable; detection is informational.
     locale = locale_override or os.environ.get("SDDKIT_LOCALE", "en")

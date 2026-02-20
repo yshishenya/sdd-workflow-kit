@@ -8,6 +8,22 @@ def _exists(root: Path, rel: str) -> bool:
 
 
 def detect_project(project_root: Path) -> dict[str, str]:
+    """Detect the programming languages and package managers used in a project.
+    
+    This function analyzes the contents of the specified project_root directory to
+    identify  the programming languages and package managers present. It checks for
+    specific files  associated with various languages, such as `pyproject.toml` for
+    Python, `package.json`  for Node.js, and `go.mod` for Go. Additionally, it
+    evaluates the presence of certain  directories and files to determine the
+    project's structure and recommends a profile  based on the findings.
+    
+    Args:
+        project_root (Path): The path to the project directory to analyze.
+    
+    Returns:
+        dict[str, str]: A dictionary containing detected languages, package managers,
+        and other project characteristics.
+    """
     languages: list[str] = []
     pms: list[str] = []
 

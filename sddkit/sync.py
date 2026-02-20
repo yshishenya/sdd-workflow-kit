@@ -171,6 +171,23 @@ _DEFAULT_REPO_DIR_IGNORES = {
 
 
 def _discover_top_level_dirs(project_root: Path, cfg: SddKitConfig | None = None) -> list[str]:
+    """Discover top-level directories in a given project root.
+    
+    This function iterates through the contents of the specified `project_root`
+    directory, collecting names of subdirectories while ignoring certain predefined
+    patterns. It also appends additional directories based on the provided `cfg`
+    configuration, ensuring that expected directories are included for
+    documentation and specifications. The output is a sorted list of unique
+    directory names.
+    
+    Args:
+        project_root (Path): The root directory of the project to search for top-level directories.
+        cfg (SddKitConfig | None): An optional configuration object that may specify additional directories to
+            include.
+    
+    Returns:
+        list[str]: A sorted list of unique top-level directory names found in the project root.
+    """
     out: list[str] = []
     try:
         for p in project_root.iterdir():
@@ -201,6 +218,7 @@ def _discover_top_level_dirs(project_root: Path, cfg: SddKitConfig | None = None
 
 
 def _describe_dir(name: str) -> str:
+    """Returns a description of the directory based on its name."""
     hint = {
         "src": "application/source code",
         "app": "application entrypoint(s)",
@@ -228,6 +246,22 @@ def _describe_dir(name: str) -> str:
 
 
 def _discover_docs_links(project_root: Path, cfg: SddKitConfig) -> list[str]:
+    """Discover documentation links based on project configuration.
+    
+    This function constructs a list of potential documentation file paths based on
+    the provided `project_root` and `cfg` settings. It first determines the
+    appropriate `docs_root` and `memory_bank_root`, then generates a list of
+    candidate files. The function checks for the existence of these files in the
+    project directory and includes them in the output if they are found or if they
+    are managed by the configuration settings.
+    
+    Args:
+        project_root (Path): The root directory of the project.
+        cfg (SddKitConfig): The configuration object containing paths for documentation and memory bank.
+    
+    Returns:
+        list[str]: A list of unique documentation file paths.
+    """
     docs_root = cfg.docs_root.strip("/").rstrip("/") or "docs"
     memory_bank_root = cfg.memory_bank_root.strip("/").rstrip("/") or "meta/memory_bank"
     candidates = [
@@ -271,6 +305,7 @@ def _discover_docs_links(project_root: Path, cfg: SddKitConfig) -> list[str]:
 
 
 def _render_repo_map_section(project_root: Path, cfg: SddKitConfig | None = None) -> str:
+    """Generates a repository map section from the top-level directories."""
     dirs = _discover_top_level_dirs(project_root, cfg)
     if not dirs:
         return ""
@@ -282,6 +317,7 @@ def _render_repo_map_section(project_root: Path, cfg: SddKitConfig | None = None
 
 
 def _render_docs_index_section(project_root: Path, cfg: SddKitConfig) -> str:
+    """Generates a markdown index section for documentation links."""
     docs = _discover_docs_links(project_root, cfg)
     if not docs:
         return ""
@@ -293,6 +329,7 @@ def _render_docs_index_section(project_root: Path, cfg: SddKitConfig) -> str:
 
 
 def _render_memory_bank_section(project_root: Path, cfg: SddKitConfig) -> str:
+    """Generates the memory bank section of documentation."""
     memory_bank_root = cfg.memory_bank_root.strip("/").rstrip("/") or "meta/memory_bank"
     if not cfg.manage_memory_bank and not (project_root / memory_bank_root).exists():
         return ""
@@ -306,6 +343,7 @@ def _render_memory_bank_section(project_root: Path, cfg: SddKitConfig) -> str:
 
 
 def _render_agents_auto_fragment(*, project_root: Path, cfg: SddKitConfig, detection: dict[str, str]) -> str:
+    """Generates an auto context string for agents."""
     cmds = _infer_commands(detection)
     repo_map = _render_repo_map_section(project_root)
     docs_index = _render_docs_index_section(project_root, cfg)
@@ -331,6 +369,22 @@ def _render_agents_auto_fragment(*, project_root: Path, cfg: SddKitConfig, detec
 
 def _render_agents_md(*, project_root: Path, kit_root: Path, cfg: SddKitConfig, detection: dict[str, str], locale: str) -> str:
     # AGENTS.md is intentionally English-only across locales for consistency.
+    """Render the AGENTS.md file content.
+    
+    This function generates the content for the AGENTS.md file by loading a
+    template and populating it with various pieces of information, including
+    project details, skills from the skillpack, and command configurations. It also
+    incorporates sections for the memory bank, repository map, and documentation
+    index. If a fragment file exists, its content is appended to the rendered
+    output for additional context.
+    
+    Args:
+        project_root (Path): The root directory of the project.
+        kit_root (Path): The root directory of the kit.
+        cfg (SddKitConfig): Configuration object containing various settings.
+        detection (dict[str, str]): A dictionary containing detected languages and package managers.
+        locale (str): The locale for the content generation.
+    """
     tpl = load_template("en", "agents/AGENTS.md.tmpl").text
 
     skillpack_dir = kit_root / "skillpacks" / cfg.skills_default_pack
@@ -817,6 +871,7 @@ def _upsert_agents_manual_block(agents_md: str, manual_fragment: str) -> str:
 
 
 def _compose_agents_manual_fragment(*, auto_fragment: str, team_fragment: str) -> str:
+    """Compose a formatted string with auto and team fragments."""
     auto_fragment = _normalize_newlines(auto_fragment).rstrip("\n")
     team_fragment = _normalize_newlines(team_fragment).rstrip("\n")
     parts = [
@@ -846,6 +901,30 @@ def _plan_from_template_tree(
 ) -> list[PlanItem]:
     # template_root is relative to templates locale root, e.g. "scaffolds/memory_bank"
     # dest_root is relative to project root, e.g. "meta/memory_bank"
+    """Generate a plan for creating or updating files from a template tree.
+    
+    This function constructs a list of `PlanItem` objects based on the provided
+    template files and configuration. It processes each template, rendering it with
+    the necessary data, and determines the appropriate actions (create, update,
+    ensure existence) based on the current state of the target files and the
+    specified execution mode. The function also handles different template types
+    and integrates additional data as needed.
+    
+    Args:
+        project_root (Path): The root directory of the project.
+        kit_root (Path): The root directory of the kit.
+        cfg (SddKitConfig): Configuration object containing project settings.
+        detection (dict[str, str]): A dictionary with detected environment information.
+        locale (str): The locale for the templates.
+        template_root (str): The root path for the template files.
+        dest_root (str): The destination path relative to the project root.
+        extra_data (dict[str, str]): Additional data to be included in the template rendering.
+        exec_mode (int | None?): Execution mode for scaffolding. Defaults to None.
+        ensure_only (bool?): If True, ensures files exist without overwriting. Defaults to False.
+    
+    Returns:
+        list[PlanItem]: A list of planned actions for file creation or updates.
+    """
     dest_root = dest_root.strip("/").rstrip("/")
     names = list_template_names(locale, template_root)
 
@@ -911,6 +990,25 @@ def _plan_from_template_tree(
 
 
 def _plan_writes(project_root: Path, kit_root: Path, cfg: SddKitConfig, detection: dict[str, str], locale: str) -> list[PlanItem]:
+    """Generate a plan for writing files based on configuration and project settings.
+    
+    This function constructs a list of planned file operations, including creating
+    and updating files based on the provided configuration and project structure.
+    It manages various templates and scaffolds, ensuring that the necessary files
+    are prepared according to the specified settings in `cfg`. The function also
+    handles different types of files, such as markdown and YAML, and incorporates
+    logic for managing existing files based on the safe mode setting.
+    
+    Args:
+        project_root (Path): The root directory of the project.
+        kit_root (Path): The root directory of the kit.
+        cfg (SddKitConfig): Configuration object containing settings for file management.
+        detection (dict[str, str]): A dictionary containing detection results for the project.
+        locale (str): The locale setting for rendering templates.
+    
+    Returns:
+        list[PlanItem]: A list of planned file operations to be executed.
+    """
     plan: list[PlanItem] = []
 
     docs_root = cfg.docs_root.strip("/").rstrip("/") or "docs"
@@ -1062,9 +1160,9 @@ def sync_project(
     This function orchestrates the synchronization of project files based on the
     provided configuration and detection parameters. It generates a plan for
     writing files, copying directories, and ensuring the existence of specified
-    targets. The function also handles skill installations if specified, and
-    manages the AGENTS.md file in speckit mode to maintain consistency with the
-    overlay fragment.
+    targets. Additionally, it handles skill installations if specified and manages
+    the AGENTS.md file in speckit mode to maintain consistency with the overlay
+    fragment.
     
     Args:
         project_root (Path): The root directory of the project.
@@ -1157,6 +1255,24 @@ def _ensure_config_notice(project_root: Path, config_path: Path) -> None:
 
 
 def check_project(project_root: Path, *, config_path: Path, cfg: SddKitConfig, detection: dict[str, str], locale: str) -> bool:
+    """Check the integrity of a project based on specified configurations.
+    
+    This function verifies the existence and correctness of planned targets within
+    a project. It checks for unmanaged items, missing files, and content drift
+    against expected values. Additionally, if in speckit mode, it validates the
+    AGENTS.md manual block against a specified overlay fragment, ensuring that the
+    content aligns with the expected format.
+    
+    Args:
+        project_root (Path): The root directory of the project to check.
+        config_path (Path): The path to the configuration file.
+        cfg (SddKitConfig): The configuration object containing settings for the check.
+        detection (dict[str, str]): A dictionary containing detection parameters.
+        locale (str): The locale setting for the project.
+    
+    Returns:
+        bool: True if all checks pass, False otherwise.
+    """
     kit_root = _kit_root()
     plan = _plan_writes(project_root, kit_root, cfg, detection, locale)
 
